@@ -1,0 +1,8 @@
+[Plymouth Theme]
+Name=JWS Animated Theme
+Description=Plymouth theme dinamis untuk JWS Orange Pi Zero 3 (Static Image / Frame Sequences / GIF)
+ModuleName=script
+
+[script]
+ImageDir=/usr/share/plymouth/themes/jws-animated
+ScriptFile=/usr/share/plymouth/themes/jws-animated/jws-animated.script

@@ -1,0 +1,13 @@
+[Unit]
+Description=Terapkan Konfigurasi Splash Screen Plymouth
+DefaultDependencies=no
+After=local-fs.target
+Before=sysinit.target plymouth-start.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/splash-apply
+RemainAfterExit=yes
+
+[Install]
+WantedBy=sysinit.target

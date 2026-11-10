@@ -1,0 +1,6 @@
+# /boot/wifi.conf
+# Konfigurasi Jaringan Nirkabel (WiFi) headless untuk Orange Pi Zero 3 JWS
+WIFI_ENABLED=no
+WIFI_SSID="Nama_WiFi"
+WIFI_PASSWORD="Password_WiFi"
+WIFI_COUNTRY="ID"

@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+# /usr/local/bin/ssh-setup
+# Menangani first-boot SSH host keys generation dan sinkronisasi authorized_keys
+
+set -e
+
+BOOT_KEYS="/boot/authorized_keys"
+USER_NAME="jws"
+USER_HOME="/home/${USER_NAME}"
+SSH_DIR="${USER_HOME}/.ssh"
+AUTH_FILE="${SSH_DIR}/authorized_keys"
+
+log() {
+    echo "[ssh-setup] $*"
+}
+
+# 1. First boot SSH host keys check & generate
+if [ ! -f /etc/ssh/ssh_host_rsa_key ] && [ ! -f /etc/ssh/ssh_host_ed25519_key ]; then
+    log "Host key SSH belum ada (first boot terdeteksi). Membuat host key baru secara independen..."
+    ssh-keygen -A || true
+    log "Host key SSH berhasil dibuat."
+fi
+
+# 2. Sinkronisasi authorized_keys dari /boot jika ada
+if [ -f "$BOOT_KEYS" ] && id -u "$USER_NAME" >/dev/null 2>&1; then
+    mkdir -p "$SSH_DIR"
+    cp -f "$BOOT_KEYS" "$AUTH_FILE"
+    chown -R "${USER_NAME}:${USER_NAME}" "$SSH_DIR"
+    chmod 700 "$SSH_DIR"
+    chmod 600 "$AUTH_FILE"
+    log "Kunci publik SSH dari /boot/authorized_keys berhasil dipasang untuk user $USER_NAME."
+fi

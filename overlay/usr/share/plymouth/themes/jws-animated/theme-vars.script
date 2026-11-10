@@ -1,0 +1,13 @@
+mode = "image";
+bg_r = 0.0;
+bg_g = 0.0;
+bg_b = 0.0;
+scale_mode = "fit";
+position_mode = "center";
+frame_count = 1;
+target_fps = 15;
+loop_mode = 1;
+text_msg = "Memuat jadwal salat...";
+text_r = 1.0;
+text_g = 1.0;
+text_b = 1.0;

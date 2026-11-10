@@ -1,0 +1,17 @@
+# /boot/splash.conf
+# Konfigurasi Splash Screen Plymouth untuk Orange Pi Zero 3 JWS
+ENABLED=yes                       # yes/no
+MODE=gif                          # image | frames | gif
+IMAGE=/boot/splash/logo.png       # dipakai bila MODE=image
+FRAMES_DIR=/boot/splash/frames    # dipakai bila MODE=frames
+GIF=/boot/splash/boot.gif         # dipakai bila MODE=gif
+FPS=15                            # kecepatan animasi (frame per detik); 0 = ikuti timing GIF
+LOOP=yes                          # yes/no
+BACKGROUND_COLOR=#000000          # warna latar (hex), juga mengisi sisi kosong
+IMAGE_SCALE=fit                   # fit | fill | center | stretch
+POSITION=center                   # center | top | bottom
+TEXT=Memuat jadwal salat...       # teks di bawah media (boleh kosong)
+TEXT_COLOR=#FFFFFF
+PROGRESS_BAR=no                   # yes/no
+MIN_DURATION=3                    # detik minimum tampil
+ROTATION=0                        # 0 | 90 | 180 | 270

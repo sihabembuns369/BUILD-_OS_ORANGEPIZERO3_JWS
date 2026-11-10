@@ -1,0 +1,12 @@
+[Unit]
+Description=First Boot SSH Keys Setup dan authorized_keys
+Before=ssh.service
+After=system-apply.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/ssh-setup
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

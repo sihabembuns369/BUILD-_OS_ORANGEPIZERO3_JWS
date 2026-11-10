@@ -1,0 +1,12 @@
+[Unit]
+Description=Terapkan Konfigurasi Sistem dari /boot/system.conf
+After=local-fs.target
+Before=network.target ssh.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/system-apply
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

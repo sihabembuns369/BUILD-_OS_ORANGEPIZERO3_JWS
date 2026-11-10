@@ -1,0 +1,8 @@
+# /boot/system.conf
+# Konfigurasi Sistem, SSH, dan Konsol untuk Orange Pi Zero 3 JWS
+HOSTNAME=jws-pi
+SSH_ENABLED=yes              # yes/no
+SSH_PORT=22
+SSH_PASSWORD_AUTH=no         # yes/no
+SERIAL_CONSOLE=yes           # yes/no
+SERIAL_BAUD=115200
