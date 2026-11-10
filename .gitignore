@@ -1,0 +1,47 @@
+# Images & archives
+*.img
+*.img.gz
+*.img.xz
+*.iso
+*.bin
+!/default_assets/**/*.bin
+
+# Build outputs & source trees
+output/
+output_modules/
+build/
+rootfs/
+my_rootfs/
+arm-trusted-firmware/
+u-boot/
+linux/
+busybox/
+*.o
+*.ko
+*.tar
+*.tar.gz
+*.tar.xz
+
+# Splash conversion cache & temporary frames
+cache/
+frames_out/
+/var/cache/splash/
+
+# Sensitive & machine-specific configs
+authorized_keys
+wifi.conf
+system.conf
+splash.conf
+!*.example
+.env
+id_rsa
+id_ecdsa
+id_ed25519
+*key
+*key.pub
+!ssh/
+
+# Misc
+*.swp
+*~
+.DS_Store

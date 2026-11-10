@@ -1,0 +1,60 @@
+#! /bin/bash
+# didalam my_rootfs
+#  find . -print0 | cpio --null -ov -H newc | gzip -9 > ../rootfs.cpio.gz
+
+# qemu-system-aarch64 -M virt -cpu cortex-a53 -m 1G \
+#   -kernel linux/arch/arm64/boot/Image \
+#   -append "root=/dev/vda1 rw rootfstype=vfat rootwait console=ttyAMA0 console=tty0 earlycon init=/init loglevel=8" \
+#   -drive file=orangepi_fat32.img,format=raw,if=virtio \
+#   -device virtio-gpu-pci \
+#   -display gtk \
+
+# qemu-system-aarch64 -M virt -cpu cortex-a53 -m 1G \
+#   -kernel linux/arch/arm64/boot/Image \
+#   -append "console=ttyAMA0 root=/dev/vda1 rw root=/dev/vda2" \
+#   -drive file=orangepi_fat32.img,format=raw,if=virtio \
+#   -device virtio-gpu-pci \
+#   -display gtk \
+#   -serial stdio
+
+
+  # -append "console=ttyAMA0,115200 earlyprintk root=/dev/vda rw rootfstype=ext4 loglevel=8 init=/sbin/init" \
+
+    # -device virtio-mouse-pci \
+qemu-system-aarch64 \
+  -M virt \
+  -cpu cortex-a53 \
+  -m 2G \
+  -kernel linux/arch/arm64/boot/Image \
+  -append "console=ttyAMA0 , 115200 earlyprintk root=/dev/vda1 rw root=/dev/vda2 rw loglevel=8 init=/sbin/init" \
+  -drive file=orangepi_fat32.img,format=raw,if=virtio \
+  -device virtio-gpu-gl-pci \
+  -display sdl,gl=on \
+  -serial stdio \
+  -device virtio-keyboard-pci \
+     -device virtio-mouse-pci \
+     -rtc base=localtime \
+  -netdev user,id=net0,hostfwd=tcp::2222-:22 \
+  -device virtio-net-pci,netdev=net0
+
+
+
+# qemu-system-aarch64 -M virt -cpu cortex-a53 -m 1G \
+#   -kernel linux/arch/arm64/boot/Image \
+#   -append "console=ttyAMA0 root=/dev/vda1 rw root=/dev/vda2" \
+#   -drive file=orangepi_fat32.img,format=raw,if=virtio \
+#   -nographic \
+
+
+# dmesg | grep -i panfrost
+# cat /proc/interrupts | grep -i gpu
+# ls /lib/firmware/mali_g31*
+# mount -t debugfs none /sys/kernel/debug
+# [@Embuns369:~]# cat /sys/kernel/debug/devices_deferred
+# dmesg | grep "1800000"
+# cat proc/device-tree/soc/gpu@1800000/status
+# cat /proc/device-tree/model
+# dmesg | grep -E "1800000|mali|panfrost"
+# dmesg | grep -i "failed to get supply"
+# dmesg | grep -iE "panfrost|mali-supply"
+# modprobe panfrost
