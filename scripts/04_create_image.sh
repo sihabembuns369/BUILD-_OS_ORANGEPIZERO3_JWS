@@ -11,100 +11,81 @@ echo "=========================================================="
 echo " [4/4] Merakit Image Sistem (.img)"
 echo "=========================================================="
 
-if [ "$EUID" -ne 0 ]; then
-    echo "Skrip ini memerlukan hak akses root (sudo) untuk partisi dan mounting loopback."
-    exec sudo -E bash "$0" "$@"
-fi
-
 IMAGE_NAME="orangepi_zero3_jws.img"
 IMAGE_PATH="${OUTPUT_DIR}/${IMAGE_NAME}"
-IMAGE_SIZE_MB=3072 # 3GB
+IMAGE_SIZE_MB=3200 # ~3.2GB total disk
+BOOT_SIZE_MB=128   # 128MB FAT32 boot partition
 
-mkdir -p "${OUTPUT_DIR}"
+mkdir -p "${OUTPUT_DIR}" "${BUILD_DIR}/staging_boot"
 
-echo "==> Membuat file sparse image berukuran ${IMAGE_SIZE_MB}MB..."
-rm -f "${IMAGE_PATH}"
-dd if=/dev/zero of="${IMAGE_PATH}" bs=1M count=0 seek="${IMAGE_SIZE_MB}"
+echo "==> Menyiapkan konten partisi BOOT (staging)..."
+STAGING_BOOT="${BUILD_DIR}/staging_boot"
+rm -rf "${STAGING_BOOT}"
+mkdir -p "${STAGING_BOOT}/splash/frames" "${STAGING_BOOT}/extlinux"
 
-echo "==> Membuat tabel partisi MBR (DOS)..."
-# Partisi 1: FAT32 (128MB) untuk /boot (offset 2MB ke 130MB)
-# Partisi 2: EXT4 (sisa kapasitas) untuk / (rootfs)
-parted -s "${IMAGE_PATH}" mklabel msdos
-parted -s "${IMAGE_PATH}" mkpart primary fat32 2048s 264191s
-parted -s "${IMAGE_PATH}" set 1 boot on
-parted -s "${IMAGE_PATH}" mkpart primary ext4 264192s 100%
+# Salin kernel & DTB
+[ -f "${OUTPUT_DIR}/Image" ] && cp -v "${OUTPUT_DIR}/Image" "${STAGING_BOOT}/"
+[ -f "${OUTPUT_DIR}/sun50i-h618-orangepi-zero3.dtb" ] && cp -v "${OUTPUT_DIR}/sun50i-h618-orangepi-zero3.dtb" "${STAGING_BOOT}/"
 
-# Setup Loop Device
-LOOP_DEV=$(losetup -fP --show "${IMAGE_PATH}")
-echo "==> Loop device terpasang di: ${LOOP_DEV}"
+# Salin aset splash default
+cp -v "${ROOT_DIR}/default_assets/logo.png" "${STAGING_BOOT}/splash/"
+cp -v "${ROOT_DIR}/default_assets/boot.gif" "${STAGING_BOOT}/splash/"
 
-cleanup() {
-    echo "==> Melepaskan mount dan loop device..."
-    umount -q /tmp/jws_mnt_root/boot 2>/dev/null || true
-    umount -q /tmp/jws_mnt_root 2>/dev/null || true
-    rm -rf /tmp/jws_mnt_root
-    losetup -d "${LOOP_DEV}" 2>/dev/null || true
-}
-trap cleanup EXIT
+# Salin konfigurasi sistem & splash
+cp -v "${ROOT_DIR}/configs/splash.conf.example" "${STAGING_BOOT}/splash.conf"
+cp -v "${ROOT_DIR}/configs/splash.conf.example" "${STAGING_BOOT}/splash.conf.example"
+cp -v "${ROOT_DIR}/configs/system.conf.example" "${STAGING_BOOT}/system.conf"
+cp -v "${ROOT_DIR}/configs/system.conf.example" "${STAGING_BOOT}/system.conf.example"
+cp -v "${ROOT_DIR}/configs/wifi.conf.example" "${STAGING_BOOT}/wifi.conf.example"
 
-BOOT_DEV="${LOOP_DEV}p1"
-ROOT_DEV="${LOOP_DEV}p2"
-
-echo "==> Memformat partisi 1 (FAT32 BOOT) dan partisi 2 (EXT4 ROOT)..."
-mkfs.vfat -F 32 -n "BOOT" "${BOOT_DEV}"
-mkfs.ext4 -F -L "ROOTFS" -O ^metadata_csum "${ROOT_DEV}"
-
-# Pasang U-Boot SPL jika file tersedia
-UBOOT_BIN="${OUTPUT_DIR}/u-boot-sunxi-with-spl.bin"
-if [ -f "${UBOOT_BIN}" ]; then
-    echo "==> Menulis U-Boot SPL ke offset 8KB loop device..."
-    dd if="${UBOOT_BIN}" of="${LOOP_DEV}" bs=1k seek=8 conv=notrunc status=none
-fi
-
-mkdir -p /tmp/jws_mnt_root
-mount "${ROOT_DEV}" /tmp/jws_mnt_root
-
-echo "==> Menyalin rootfs ke partisi root..."
-cp -a "${ROOTFS_DIR}"/* /tmp/jws_mnt_root/
-
-mkdir -p /tmp/jws_mnt_root/boot
-mount "${BOOT_DEV}" /tmp/jws_mnt_root/boot
-
-echo "==> Menyalin kernel, DTB, dan file splash ke partisi BOOT..."
-[ -f "${OUTPUT_DIR}/Image" ] && cp -v "${OUTPUT_DIR}/Image" /tmp/jws_mnt_root/boot/
-[ -f "${OUTPUT_DIR}/sun50i-h618-orangepi-zero3.dtb" ] && cp -v "${OUTPUT_DIR}/sun50i-h618-orangepi-zero3.dtb" /tmp/jws_mnt_root/boot/
-
-# Buat direktori splash di FAT32 partisi boot
-mkdir -p /tmp/jws_mnt_root/boot/splash /tmp/jws_mnt_root/boot/splash/frames
-cp -v "${ROOT_DIR}/default_assets/logo.png" /tmp/jws_mnt_root/boot/splash/
-cp -v "${ROOT_DIR}/default_assets/boot.gif" /tmp/jws_mnt_root/boot/splash/
-
-# Salin template config dan config aktif
-cp -v "${ROOT_DIR}/configs/splash.conf.example" /tmp/jws_mnt_root/boot/
-cp -v "${ROOT_DIR}/configs/splash.conf.example" /tmp/jws_mnt_root/boot/splash.conf
-
-cp -v "${ROOT_DIR}/configs/system.conf.example" /tmp/jws_mnt_root/boot/
-cp -v "${ROOT_DIR}/configs/system.conf.example" /tmp/jws_mnt_root/boot/system.conf
-
-cp -v "${ROOT_DIR}/configs/wifi.conf.example" /tmp/jws_mnt_root/boot/
-
-# Buat konfigurasi extlinux (standar U-Boot generic distro boot)
-mkdir -p /tmp/jws_mnt_root/boot/extlinux
-cat <<EOF > /tmp/jws_mnt_root/boot/extlinux/extlinux.conf
+# Konfigurasi Extlinux untuk U-Boot autoboot
+cat <<EOF > "${STAGING_BOOT}/extlinux/extlinux.conf"
 LABEL OrangePi_Zero3_JWS
     LINUX /Image
     FDT /sun50i-h618-orangepi-zero3.dtb
     APPEND root=/dev/mmcblk0p2 rootwait rw console=tty1 console=ttyS0,115200 quiet splash loglevel=3 vt.global_cursor_default=0
 EOF
 
-# Konfigurasi /etc/fstab
-cat <<EOF > /tmp/jws_mnt_root/etc/fstab
-# /etc/fstab: static file system information
-LABEL=ROOTFS    /               ext4    errors=remount-ro,noatime    0   1
-LABEL=BOOT      /boot           vfat    defaults                     0   2
-EOF
+echo "==> Membuat partisi BOOT (FAT32) dengan mformat & mcopy..."
+BOOT_IMG="${BUILD_DIR}/boot.img"
+rm -f "${BOOT_IMG}"
+dd if=/dev/zero of="${BOOT_IMG}" bs=1M count="${BOOT_SIZE_MB}" status=none
+mformat -i "${BOOT_IMG}" -F -v "BOOT" ::
 
-echo "==> Sinkronisasi berkas ke disk..."
+# Salin seluruh isi staging_boot ke dalam boot.img FAT32
+mcopy -i "${BOOT_IMG}" -s "${STAGING_BOOT}"/* ::
+
+ROOT_IMG="${BUILD_DIR}/rootfs.img"
+if [ ! -f "${ROOT_IMG}" ]; then
+    echo "Error: File ${ROOT_IMG} tidak ditemukan!"
+    exit 1
+fi
+
+echo "==> Merakit disk image akhir (${IMAGE_PATH})..."
+rm -f "${IMAGE_PATH}"
+dd if=/dev/zero of="${IMAGE_PATH}" bs=1M count=0 seek="${IMAGE_SIZE_MB}" status=none
+
+# Hitung sektor partisi:
+# Sektor 2048 s/d 264191: Partisi 1 FAT32 (128MB)
+# Sektor 264192 s/d end: Partisi 2 EXT4 (ROOTFS)
+parted -s "${IMAGE_PATH}" mklabel msdos
+parted -s "${IMAGE_PATH}" mkpart primary fat32 2048s 264191s
+parted -s "${IMAGE_PATH}" set 1 boot on
+parted -s "${IMAGE_PATH}" mkpart primary ext4 264192s 100%
+
+echo "==> Menulis partisi BOOT ke disk image..."
+dd if="${BOOT_IMG}" of="${IMAGE_PATH}" bs=512 seek=2048 conv=notrunc status=none
+
+echo "==> Menulis partisi ROOTFS ke disk image..."
+dd if="${ROOT_IMG}" of="${IMAGE_PATH}" bs=512 seek=264192 conv=notrunc status=none
+
+# Tulis bootloader Allwinner SPL ke offset 8KB
+UBOOT_BIN="${OUTPUT_DIR}/u-boot-sunxi-with-spl.bin"
+if [ -f "${UBOOT_BIN}" ]; then
+    echo "==> Menulis U-Boot SPL ke offset 8KB..."
+    dd if="${UBOOT_BIN}" of="${IMAGE_PATH}" bs=1k seek=8 conv=notrunc status=none
+fi
+
 sync
 
 echo "=========================================================="

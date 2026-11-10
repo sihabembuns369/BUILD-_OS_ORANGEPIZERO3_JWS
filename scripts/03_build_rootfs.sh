@@ -11,34 +11,32 @@ echo "=========================================================="
 echo " [3/4] Membangun Debian Rootfs (${DEBIAN_SUITE} arm64)"
 echo "=========================================================="
 
+# Gunakan unshare user & mount namespace jika tidak dijalankan sebagai root murni
 if [ "$EUID" -ne 0 ]; then
-    echo "Skrip ini memerlukan hak akses root (sudo) untuk menjalankan debootstrap dan chroot."
-    exec sudo -E bash "$0" "$@"
+    echo "==> Menjalankan dalam user & mount namespace (unshare -rm)..."
+    exec unshare -rm bash "$0" "$@"
 fi
 
 mkdir -p "${ROOTFS_DIR}"
 
 # 1. Debootstrap tahap pertama & kedua
 if [ ! -f "${ROOTFS_DIR}/bin/bash" ]; then
-    echo "==> Menjalankan debootstrap untuk Debian ${DEBIAN_SUITE}..."
+    echo "==> Menjalankan debootstrap untuk Debian ${DEBIAN_SUITE} arm64..."
     debootstrap --arch=arm64 \
         --foreign \
         --include=systemd,systemd-sysv,udev,dbus,locales,ca-certificates,sudo,bash-completion,kmod \
         "${DEBIAN_SUITE}" "${ROOTFS_DIR}" http://deb.debian.org/debian
 
-    # Salin binary qemu-aarch64-static untuk emulasi chroot
-    cp /usr/bin/qemu-aarch64-static "${ROOTFS_DIR}/usr/bin/"
+    # Salin binary qemu-aarch64-static jika ada
+    [ -f /usr/bin/qemu-aarch64-static ] && cp -f /usr/bin/qemu-aarch64-static "${ROOTFS_DIR}/usr/bin/" || true
 
-    echo "==> Menjalankan debootstrap second-stage di chroot..."
+    echo "==> Menjalankan debootstrap second-stage..."
     chroot "${ROOTFS_DIR}" /debootstrap/debootstrap --second-stage
 fi
 
-# Pastikan qemu-aarch64-static tersedia di rootfs
-cp -f /usr/bin/qemu-aarch64-static "${ROOTFS_DIR}/usr/bin/" || true
-
 # Setup mount chroot
 cleanup() {
-    echo "==> Membersihkan mount..."
+    echo "==> Membersihkan mount chroot..."
     umount -l "${ROOTFS_DIR}/proc" 2>/dev/null || true
     umount -l "${ROOTFS_DIR}/sys" 2>/dev/null || true
     umount -l "${ROOTFS_DIR}/dev/pts" 2>/dev/null || true
@@ -46,10 +44,11 @@ cleanup() {
 }
 trap cleanup EXIT
 
-mount -t proc /proc "${ROOTFS_DIR}/proc"
-mount -t sysfs /sys "${ROOTFS_DIR}/sys"
-mount --bind /dev "${ROOTFS_DIR}/dev"
-mount --bind /dev/pts "${ROOTFS_DIR}/dev/pts"
+mount -t proc /proc "${ROOTFS_DIR}/proc" 2>/dev/null || mount -t proc proc "${ROOTFS_DIR}/proc"
+mount -t sysfs /sys "${ROOTFS_DIR}/sys" 2>/dev/null || mount -t sysfs sysfs "${ROOTFS_DIR}/sys"
+mount --bind /dev "${ROOTFS_DIR}/dev" 2>/dev/null || true
+mkdir -p "${ROOTFS_DIR}/dev/pts"
+mount -t devpts devpts "${ROOTFS_DIR}/dev/pts" 2>/dev/null || true
 
 # Salin resolv.conf untuk akses internet chroot
 cp -L /etc/resolv.conf "${ROOTFS_DIR}/etc/resolv.conf"
@@ -110,7 +109,6 @@ rm -f /etc/ssh/ssh_host_*
 # Buat user jws non-root dengan sudo
 if ! id -u jws >/dev/null 2>&1; then
     useradd -m -s /bin/bash -G sudo,audio,video,render,input,dialout jws
-    # Atur password sementara yang wajib diganti atau disiapkan sudo tanpa password
     echo "jws:jws" | chpasswd
     echo "jws ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/010_jws-nopasswd
     chmod 440 /etc/sudoers.d/010_jws-nopasswd

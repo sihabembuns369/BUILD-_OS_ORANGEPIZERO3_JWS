@@ -42,9 +42,36 @@ err() {
 
 mkdir -p "$CACHE_DIR" "$THEME_DIR"
 
+# Aman membaca config tanpa eval
 if [ -f "$CONF_FILE" ]; then
-    # Filter dan import hanya variabel yang diizinkan untuk keamanan
-    eval "$(grep -E '^[A-Z_]+=' "$CONF_FILE" | sed 's/\r$//')"
+    while IFS='=' read -r key val || [ -n "$key" ]; do
+        key=$(echo "$key" | tr -d ' \r\t')
+        [[ "$key" =~ ^#.*$ ]] && continue
+        [ -z "$key" ] && continue
+        # Bersihkan komentar inline dan spasi
+        val=$(echo "$val" | sed -E 's/[ \t]+#.*$//' | sed -e 's/^[ \t]*//' -e 's/[ \t\r]*$//')
+        val="${val%\"}"
+        val="${val#\"}"
+        val="${val%\'}"
+        val="${val#\'}"
+        case "$key" in
+            ENABLED) ENABLED="$val" ;;
+            MODE) MODE="$val" ;;
+            IMAGE) IMAGE="$val" ;;
+            FRAMES_DIR) FRAMES_DIR="$val" ;;
+            GIF) GIF="$val" ;;
+            FPS) FPS="$val" ;;
+            LOOP) LOOP="$val" ;;
+            BACKGROUND_COLOR) BACKGROUND_COLOR="$val" ;;
+            IMAGE_SCALE) IMAGE_SCALE="$val" ;;
+            POSITION) POSITION="$val" ;;
+            TEXT) TEXT="$val" ;;
+            TEXT_COLOR) TEXT_COLOR="$val" ;;
+            PROGRESS_BAR) PROGRESS_BAR="$val" ;;
+            MIN_DURATION) MIN_DURATION="$val" ;;
+            ROTATION) ROTATION="$val" ;;
+        esac
+    done < "$CONF_FILE"
 else
     warn "File $CONF_FILE tidak ditemukan, menggunakan nilai default."
 fi
@@ -57,24 +84,20 @@ if [ "${ENABLED,,}" = "no" ]; then
         exit 0
     fi
     if command -v plymouth-set-default-theme >/dev/null 2>&1; then
-        plymouth-set-default-theme details || true
-        update-initramfs -u || true
+        plymouth-set-default-theme details 2>/dev/null || true
     fi
     echo "$CURRENT_HASH" > "$HASH_FILE"
     exit 0
 fi
 
-# Normalisasi hex color ke RGB float (0.0 - 1.0) untuk Plymouth Script
+# Pure Bash hex color to RGB float (0.000 - 1.000)
 hex_to_rgb_float() {
     local hex="${1#\#}"
-    if [ ${#hex} -ne 6 ]; then
-        echo "0.0 0.0 0.0"
-        return
-    fi
+    [ ${#hex} -ne 6 ] && hex="000000"
     local r=$((16#${hex:0:2}))
     local g=$((16#${hex:2:2}))
     local b=$((16#${hex:4:2}))
-    awk "BEGIN {printf \"%.3f %.3f %.3f\", $r/255.0, $g/255.0, $b/255.0}"
+    printf "0.%03d 0.%03d 0.%03d" $((r * 1000 / 255)) $((g * 1000 / 255)) $((b * 1000 / 255))
 }
 
 read -r BG_R BG_G BG_B <<< "$(hex_to_rgb_float "$BACKGROUND_COLOR")"
@@ -104,12 +127,12 @@ calc_hash() {
     local h1=""
     local h2=""
     if [ -f "$CONF_FILE" ]; then
-        h1=$(sha256sum "$CONF_FILE" | awk '{print $1}')
+        h1=$(sha256sum "$CONF_FILE" 2>/dev/null | cut -d' ' -f1)
     fi
     if [ -f "$TARGET_MEDIA" ]; then
-        h2=$(sha256sum "$TARGET_MEDIA" | awk '{print $1}')
+        h2=$(sha256sum "$TARGET_MEDIA" 2>/dev/null | cut -d' ' -f1)
     elif [ -d "$TARGET_MEDIA" ]; then
-        h2=$(find "$TARGET_MEDIA" -type f -exec sha256sum {} + | sort | sha256sum | awk '{print $1}')
+        h2=$(find "$TARGET_MEDIA" -maxdepth 1 -type f 2>/dev/null | sort | head -n 60 | sha256sum | cut -d' ' -f1)
     fi
     echo "${h1}_${h2}_${MODE}_${FPS}_${LOOP}_${IMAGE_SCALE}_${POSITION}"
 }
@@ -122,16 +145,11 @@ fi
 
 log "Perubahan terdeteksi atau cache kosong. Memperbarui tema splash..."
 
-# Fallback generator
 apply_fallback_logo() {
     warn "Menerapkan fallback ke logo default statis."
-    if [ ! -f "$DEFAULT_LOGO" ]; then
-        # Buat dummy default logo darurat bila belum ada
-        if command -v convert >/dev/null 2>&1; then
-            convert -size 400x400 xc:black -fill white -gravity center -pointsize 24 -annotate 0 "JWS Pi\nMemuat..." "$DEFAULT_LOGO" || true
-        fi
+    if [ -f "$DEFAULT_LOGO" ]; then
+        cp -f "$DEFAULT_LOGO" "${THEME_DIR}/splash.png" 2>/dev/null || true
     fi
-    cp -f "$DEFAULT_LOGO" "${THEME_DIR}/splash.png" || true
     cat <<EOF > "${THEME_DIR}/theme-vars.script"
 mode = "image";
 bg_r = 0.0;
@@ -149,7 +167,7 @@ text_b = 1.0;
 EOF
 }
 
-# Bersihkan frame lama di direktori tema
+# Bersihkan frame lama
 rm -f "${THEME_DIR}"/frame_*.png "${THEME_DIR}"/splash.png
 
 SUCCESS=0
@@ -171,24 +189,17 @@ elif [ "${MODE,,}" = "gif" ]; then
         rm -rf "$TEMP_CONV"
         mkdir -p "$TEMP_CONV"
         
-        # Gunakan tools/gif2splash.sh atau command langsung
         if [ -x "/usr/local/bin/gif2splash.sh" ]; then
-            /usr/local/bin/gif2splash.sh "$GIF" "$TEMP_CONV" 60 "1280x720" || true
+            /usr/local/bin/gif2splash.sh "$GIF" "$TEMP_CONV" 60 "1280x720" 2>/dev/null || true
         elif command -v ffmpeg >/dev/null 2>&1; then
-            ffmpeg -loglevel error -y -i "$GIF" "${TEMP_CONV}/frame_%03d.png" || true
+            ffmpeg -loglevel error -y -i "$GIF" "${TEMP_CONV}/frame_%03d.png" 2>/dev/null || true
         elif command -v convert >/dev/null 2>&1; then
-            convert "$GIF" -coalesce -resize "1280x720>" "${TEMP_CONV}/frame_%03d.png" || true
+            convert "$GIF" -coalesce -resize "1280x720>" "${TEMP_CONV}/frame_%03d.png" 2>/dev/null || true
         fi
         
-        TOTAL_CONV=$(find "$TEMP_CONV" -name "frame_*.png" | wc -l)
+        TOTAL_CONV=$(find "$TEMP_CONV" -maxdepth 1 -name "frame_*.png" 2>/dev/null | wc -l)
         if [ "$TOTAL_CONV" -gt 0 ]; then
-            # Batasi hingga max 60 frame dan target ukuran < 20MB
-            if [ "$TOTAL_CONV" -gt 60 ]; then
-                warn "Jumlah frame ($TOTAL_CONV) melebihi batas 60 frame. Mengambil 60 frame pertama."
-                TOTAL_CONV=60
-            fi
-            
-            # Salin frame ke direktori tema
+            [ "$TOTAL_CONV" -gt 60 ] && TOTAL_CONV=60
             COUNT=1
             for f in $(ls "$TEMP_CONV"/frame_*.png | sort | head -n "$TOTAL_CONV"); do
                 DEST=$(printf "${THEME_DIR}/frame_%03d.png" "$COUNT")
@@ -199,7 +210,7 @@ elif [ "${MODE,,}" = "gif" ]; then
             SUCCESS=1
             rm -rf "$TEMP_CONV"
         else
-            warn "Gagal mengonversi GIF atau file GIF tidak valid!"
+            warn "Gagal mengonversi GIF atau alat konversi belum tersedia. Fallback ke logo bawaan."
         fi
     else
         warn "File GIF '$GIF' tidak ditemukan!"
@@ -208,7 +219,7 @@ elif [ "${MODE,,}" = "gif" ]; then
 elif [ "${MODE,,}" = "frames" ]; then
     if [ -d "$FRAMES_DIR" ]; then
         log "Memproses urutan frame dari direktori: $FRAMES_DIR"
-        FOUND_FRAMES=$(find "$FRAMES_DIR" -maxdepth 1 -name "*.png" | wc -l)
+        FOUND_FRAMES=$(find "$FRAMES_DIR" -maxdepth 1 -name "*.png" 2>/dev/null | wc -l)
         if [ "$FOUND_FRAMES" -gt 0 ]; then
             COUNT=1
             for f in $(ls "$FRAMES_DIR"/*.png | sort | head -n 60); do
@@ -226,16 +237,9 @@ elif [ "${MODE,,}" = "frames" ]; then
     fi
 fi
 
-# Validasi ukuran total direktori tema (< 20MB)
-TOTAL_KB=$(du -sk "$THEME_DIR" | cut -f1)
-if [ "$TOTAL_KB" -gt 20480 ]; then
-    warn "Ukuran direktori tema (${TOTAL_KB} KB) melebihi batas 20 MB! Melakukan optimasi..."
-fi
-
 if [ "$SUCCESS" -eq 1 ]; then
     LOOP_VAL=1
     [ "${LOOP,,}" = "no" ] && LOOP_VAL=0
-    
     FPS_VAL="${FPS:-15}"
     if ! [[ "$FPS_VAL" =~ ^[0-9]+$ ]] || [ "$FPS_VAL" -le 0 ]; then
         FPS_VAL=15
@@ -256,19 +260,18 @@ text_r = ${TXT_R};
 text_g = ${TXT_G};
 text_b = ${TXT_B};
 EOF
-    log "Tema berhasil dikonfigurasi: MODE=${MODE,,}, FRAMES=${FINAL_FRAME_COUNT}, FPS=${FPS_VAL}, LOOP=${LOOP_VAL}"
+    log "Tema Plymouth dikonfigurasi: MODE=${MODE,,}, FRAMES=${FINAL_FRAME_COUNT}, FPS=${FPS_VAL}, LOOP=${LOOP_VAL}"
 else
     apply_fallback_logo
 fi
 
-# Set default Plymouth theme dan perbarui initramfs
 if command -v plymouth-set-default-theme >/dev/null 2>&1; then
-    plymouth-set-default-theme jws-animated || true
+    plymouth-set-default-theme jws-animated 2>/dev/null || true
 fi
 
-log "Memperbarui initramfs untuk menyimpan perubahan splash ke boot awal..."
+# Update initramfs dengan batas waktu maksimal 10 detik agar boot tidak pernah terhambat
 if command -v update-initramfs >/dev/null 2>&1; then
-    update-initramfs -u || warn "Gagal update-initramfs (mungkin sedang chroot / tanpa kernel terpasang)"
+    timeout 10 update-initramfs -u 2>/dev/null || true
 fi
 
 echo "$CURRENT_HASH" > "$HASH_FILE"

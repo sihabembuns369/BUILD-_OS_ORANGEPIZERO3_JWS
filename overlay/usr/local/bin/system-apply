@@ -10,7 +10,7 @@ WIFI_CONF="/boot/wifi.conf"
 HOSTNAME="jws-pi"
 SSH_ENABLED="yes"
 SSH_PORT="22"
-SSH_PASSWORD_AUTH="no"
+SSH_PASSWORD_AUTH="yes"
 SERIAL_CONSOLE="yes"
 SERIAL_BAUD="115200"
 
@@ -34,17 +34,15 @@ if [ -n "$HOSTNAME" ]; then
     if [ "$CURRENT_HOST" != "$HOSTNAME" ]; then
         log "Mengubah hostname menjadi '$HOSTNAME'..."
         echo "$HOSTNAME" > /etc/hostname
-        hostname "$HOSTNAME" || true
-        # Update /etc/hosts
-        sed -i "s/127\.0\.1\.1.*/127.0.1.1\t$HOSTNAME/g" /etc/hosts || echo -e "127.0.1.1\t$HOSTNAME" >> /etc/hosts
+        hostname "$HOSTNAME" 2>/dev/null || true
+        sed -i "s/127\.0\.1\.1.*/127.0.1.1\t$HOSTNAME/g" /etc/hosts 2>/dev/null || echo -e "127.0.1.1\t$HOSTNAME" >> /etc/hosts
     fi
 fi
 
 # 2. Atur SSH Server
 if [ "${SSH_ENABLED,,}" = "yes" ]; then
-    systemctl unmask ssh || true
-    systemctl enable ssh || true
-    systemctl start ssh || true
+    systemctl unmask ssh 2>/dev/null || true
+    systemctl enable ssh 2>/dev/null || true
     
     # Validasi port
     if ! [[ "$SSH_PORT" =~ ^[0-9]+$ ]] || [ "$SSH_PORT" -lt 1 ] || [ "$SSH_PORT" -gt 65535 ]; then
@@ -52,7 +50,6 @@ if [ "${SSH_ENABLED,,}" = "yes" ]; then
         SSH_PORT=22
     fi
     
-    # Update konfigurasi SSH
     SSHD_DROPIN_DIR="/etc/ssh/sshd_config.d"
     mkdir -p "$SSHD_DROPIN_DIR"
     
@@ -65,20 +62,19 @@ PermitRootLogin no
 PasswordAuthentication ${PASS_AUTH_VAL}
 PubkeyAuthentication yes
 EOF
-    systemctl reload ssh || true
 else
     log "Menonaktifkan SSH service..."
-    systemctl stop ssh || true
-    systemctl disable ssh || true
+    systemctl disable ssh 2>/dev/null || true
 fi
 
-# 3. Atur Serial Console
+# 3. Atur Serial Console (Deteksi Hardware Nyata vs QEMU Virt)
 if [ "${SERIAL_CONSOLE,,}" = "yes" ]; then
-    systemctl enable "serial-getty@ttyS0.service" || true
-    systemctl start "serial-getty@ttyS0.service" || true
-else
-    systemctl stop "serial-getty@ttyS0.service" || true
-    systemctl disable "serial-getty@ttyS0.service" || true
+    if [ -c "/dev/ttyS0" ]; then
+        systemctl enable serial-getty@ttyS0.service 2>/dev/null || true
+    fi
+    if [ -c "/dev/ttyAMA0" ]; then
+        systemctl enable serial-getty@ttyAMA0.service 2>/dev/null || true
+    fi
 fi
 
 # 4. Atur WiFi Headless jika ada wifi.conf
@@ -104,7 +100,6 @@ network={
 }
 EOF
         chmod 600 "$WPA_SUP_FILE"
-        systemctl restart wpa_supplicant || true
     fi
 fi
 

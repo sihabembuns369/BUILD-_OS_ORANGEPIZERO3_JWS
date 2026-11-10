@@ -35,9 +35,14 @@ if [ -f "$KERNEL_IMG" ]; then
     KERNEL_OPTS="-kernel ${KERNEL_IMG} -append \"root=/dev/vda2 rw rootwait console=tty1 console=ttyAMA0,115200 quiet splash loglevel=3 vt.global_cursor_default=0\""
 fi
 
+SSH_PORT="${SSH_PORT:-22220}"
+if ss -tulpn | grep -q ":2222 "; then
+    SSH_PORT=22220
+fi
+
 echo "==> Menjalankan QEMU aarch64..."
 echo "==> Image   : $IMG_FILE"
-echo "==> SSH Port: 2222 (ssh -p 2222 jws@localhost)"
+echo "==> SSH Port: $SSH_PORT (ssh -p $SSH_PORT jws@localhost)"
 echo "==> Keluar  : Tekan Ctrl+A lalu X"
 
 eval qemu-system-aarch64 \
@@ -52,5 +57,5 @@ eval qemu-system-aarch64 \
   -device virtio-keyboard-pci \
   -device virtio-mouse-pci \
   -rtc base=localtime \
-  -netdev user,id=net0,hostfwd=tcp::2222-:22 \
+  -netdev user,id=net0,hostfwd=tcp::${SSH_PORT}-:22 \
   -device virtio-net-pci,netdev=net0

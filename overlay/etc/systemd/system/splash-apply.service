@@ -8,6 +8,7 @@ Before=sysinit.target plymouth-start.service
 Type=oneshot
 ExecStart=/usr/local/bin/splash-apply
 RemainAfterExit=yes
+TimeoutSec=15
 
 [Install]
 WantedBy=sysinit.target

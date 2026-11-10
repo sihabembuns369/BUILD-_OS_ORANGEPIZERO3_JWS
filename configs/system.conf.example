@@ -3,6 +3,6 @@
 HOSTNAME=jws-pi
 SSH_ENABLED=yes              # yes/no
 SSH_PORT=22
-SSH_PASSWORD_AUTH=no         # yes/no
+SSH_PASSWORD_AUTH=yes        # yes/no (default yes untuk first boot)
 SERIAL_CONSOLE=yes           # yes/no
 SERIAL_BAUD=115200
