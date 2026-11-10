@@ -7,7 +7,7 @@ Before=network.target ssh.service
 Type=oneshot
 ExecStart=/usr/local/bin/system-apply
 RemainAfterExit=yes
-TimeoutSec=15
+TimeoutSec=60
 
 [Install]
 WantedBy=multi-user.target

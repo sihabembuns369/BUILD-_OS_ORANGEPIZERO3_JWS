@@ -26,11 +26,16 @@ echo "==> Menyiapkan defconfig arm64..."
 make ARCH="${ARCH}" CROSS_COMPILE="${CROSS_COMPILE}" defconfig
 
 echo "==> Menerapkan konfigurasi hardware Orange Pi Zero 3 & Virtio QEMU..."
+./scripts/config --enable CONFIG_DRM
+./scripts/config --enable CONFIG_DRM_KMS_HELPER
+./scripts/config --enable CONFIG_DRM_FBDEV_EMULATION
+./scripts/config --enable CONFIG_FB
 ./scripts/config --enable CONFIG_DRM_SUN4I
 ./scripts/config --enable CONFIG_DRM_SUN8I_MIXER
 ./scripts/config --enable CONFIG_DRM_SUN8I_DW_HDMI
-./scripts/config --enable CONFIG_DRM_SUN4I_HDMI
+./scripts/config --enable CONFIG_DRM_SUN8I_TCON_TOP
 ./scripts/config --enable CONFIG_DRM_PANFROST
+./scripts/config --enable CONFIG_DRM_VIRTIO_GPU
 ./scripts/config --enable CONFIG_FRAMEBUFFER_CONSOLE
 ./scripts/config --enable CONFIG_LOGO
 

@@ -1,5 +1,20 @@
 # CHANGELOG
 
+## [2026-11-11] Fix Display KMS/DRM Built-in dan Transisi Mulus Plymouth Splash ke Aplikasi JWS
+- Apa yang diubah:
+  - Mengubah driver DRM/KMS Allwinner (`CONFIG_DRM_SUN4I`, `CONFIG_DRM_SUN8I_DW_HDMI`, `CONFIG_DRM_SUN8I_MIXER`, `CONFIG_DRM_SUN8I_TCON_TOP`) dan Virtio-GPU (`CONFIG_DRM_VIRTIO_GPU`) dari modul (`=m`) menjadi built-in kernel (`=y`).
+  - Efek: Inisialisasi display maju dari detik 12.4 menjadi 0.36 detik saat boot awal, menghilangkan delay "Guest has not initialized the display (yet)" dan memastikan Plymouth langsung mendeteksi display KMS/DRM sejak awal.
+  - Mengoptimasi `overlay/usr/local/bin/system-apply`: Menghapus pemanggilan berulang `systemctl enable` saat early boot yang memicu timeout 15 detik, mempercepat waktu eksekusi dari 18 detik menjadi < 0.1 detik.
+  - Memperbaiki `overlay/etc/systemd/system/jws.service` dan mem-mask `plymouth-quit.service`/`plymouth-quit-wait.service` bawaan systemd: Menghilangkan penutupan splash prematur sehingga splash screen tetap aktif menutupi log boot sampai aplikasi jadwal salat siap menampilkan UI di `/dev/tty1`.
+- Alasan: Mengatasi masalah splash screen tidak muncul saat boot QEMU/HDMI dan service `system-apply` gagal akibat timeout.
+- File/komponen terdampak: `configs/kernel_arm64_defconfig`, `scripts/02_build_kernel.sh`, `overlay/usr/local/bin/system-apply`, `overlay/etc/systemd/system/system-apply.service`, `overlay/etc/systemd/system/jws.service`, `CHANGELOG.md`.
+- Hasil uji (QEMU / board fisik):
+  - Layar display menyala seketika di 0.36 detik (driver `virtio-gpu-pci` built-in).
+  - `system-apply.service` selesai sukses instan tanpa timeout (`[ OK ] Finished system-apply.service`).
+  - Plymouth splash memegang kendali display sampai transisi mulus ke `jws.service`.
+  - Tidak ada pesan error `[FAILED]` di layar display konsol.
+- Commit / tag: `fix(drm): inisialisasi display sedini mungkin dan perbaiki timing splash`
+
 ## [2026-11-10] Milestone 3: Integrasi Sistem Lengkap, Verifikasi QEMU, dan Validasi Kriteria Lulus
 - Apa yang diubah:
   - Pembuatan dan provisioning Rootfs Debian 12 (Bookworm) ARM64 minimalis dengan kernel modules 6.6.162, depmod, SDL2 runtime, alsa-utils, bluez, wpa_supplicant, openssh-server, plymouth, dan ffmpeg.

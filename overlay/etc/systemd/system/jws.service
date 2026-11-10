@@ -1,6 +1,7 @@
 [Unit]
 Description=Jadwal Waktu Salat (JWS) SDL2 Kiosk Application
-After=systemd-user-sessions.service plymouth-quit-wait.service
+After=systemd-user-sessions.service plymouth-start.service
+Before=plymouth-quit.service
 Conflicts=getty@tty1.service
 
 [Service]
@@ -17,7 +18,7 @@ Environment=SDL_RENDER_DRIVER=opengles2
 Environment=XDG_RUNTIME_DIR=/run/user/1000
 
 # Tutup splash screen secara halus saat aplikasi siap
-ExecStartPost=-/bin/sh -c 'sleep 1 && plymouth quit --retain-splash 2>/dev/null || true'
+ExecStartPost=-/bin/sh -c 'sleep 2 && plymouth quit --retain-splash 2>/dev/null || true'
 ExecStart=/usr/local/bin/jws-app
 Restart=always
 RestartSec=3

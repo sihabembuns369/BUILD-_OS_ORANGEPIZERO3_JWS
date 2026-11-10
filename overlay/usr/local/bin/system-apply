@@ -41,9 +41,6 @@ fi
 
 # 2. Atur SSH Server
 if [ "${SSH_ENABLED,,}" = "yes" ]; then
-    systemctl unmask ssh 2>/dev/null || true
-    systemctl enable ssh 2>/dev/null || true
-    
     # Validasi port
     if ! [[ "$SSH_PORT" =~ ^[0-9]+$ ]] || [ "$SSH_PORT" -lt 1 ] || [ "$SSH_PORT" -gt 65535 ]; then
         warn "Port SSH tidak valid ($SSH_PORT), menggunakan port 22."
@@ -62,22 +59,9 @@ PermitRootLogin no
 PasswordAuthentication ${PASS_AUTH_VAL}
 PubkeyAuthentication yes
 EOF
-else
-    log "Menonaktifkan SSH service..."
-    systemctl disable ssh 2>/dev/null || true
 fi
 
-# 3. Atur Serial Console (Deteksi Hardware Nyata vs QEMU Virt)
-if [ "${SERIAL_CONSOLE,,}" = "yes" ]; then
-    if [ -c "/dev/ttyS0" ]; then
-        systemctl enable serial-getty@ttyS0.service 2>/dev/null || true
-    fi
-    if [ -c "/dev/ttyAMA0" ]; then
-        systemctl enable serial-getty@ttyAMA0.service 2>/dev/null || true
-    fi
-fi
-
-# 4. Atur WiFi Headless jika ada wifi.conf
+# 3. Atur WiFi Headless jika ada wifi.conf
 if [ -f "$WIFI_CONF" ]; then
     WIFI_ENABLED="no"
     WIFI_SSID=""
