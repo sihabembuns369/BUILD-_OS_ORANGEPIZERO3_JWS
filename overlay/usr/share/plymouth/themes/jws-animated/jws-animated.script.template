@@ -1,16 +1,14 @@
-theme_dir = "/usr/share/plymouth/themes/jws-animated/";
-
 // Background color
 Window.SetBackgroundTopColor(bg_r, bg_g, bg_b);
 Window.SetBackgroundBottomColor(bg_r, bg_g, bg_b);
 
-// Sprite utama
+// Sprite utama container
 screen_sprite = Sprite();
 
 if (mode == "image") {
-    raw_img = Image(theme_dir + "splash.png");
+    raw_img = Image("splash.png");
     if (!raw_img) {
-        raw_img = Image(theme_dir + "default_logo.png");
+        raw_img = Image("default_logo.png");
     }
 
     if (raw_img) {
@@ -32,7 +30,7 @@ if (mode == "image") {
             iw = raw_img.GetWidth();
             ih = raw_img.GetHeight();
             pos_x = x + (w - iw) / 2;
-            pos_y = y + (h - ih) / 2;
+            pos_y = y + (h - ih) / 2 - 30;
             if (position_mode == "top") {
                 pos_y = y + h * 0.15;
             } else if (position_mode == "bottom") {
@@ -48,13 +46,14 @@ if (mode == "image") {
 
 } else {
     // Mode Animation / Frames / GIF
+    // Plymouth Image() secara otomatis meresolusi path relatif terhadap ImageDir
     for (i = 1; i <= frame_count; i++) {
         idx_str = "";
         if (i < 10) idx_str = "00" + i;
         else if (i < 100) idx_str = "0" + i;
         else idx_str = "" + i;
 
-        frames[i] = Image(theme_dir + "frame_" + idx_str + ".png");
+        frames[i] = Image("frame_" + idx_str + ".png");
     }
 
     current_frame = 1;
@@ -99,7 +98,7 @@ if (mode == "image") {
             iw = img.GetWidth();
             ih = img.GetHeight();
             pos_x = x + (w - iw) / 2;
-            pos_y = y + (h - ih) / 2;
+            pos_y = y + (h - ih) / 2 - 30;
             if (position_mode == "top") {
                 pos_y = y + h * 0.15;
             } else if (position_mode == "bottom") {
