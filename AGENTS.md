@@ -3,10 +3,12 @@ Kamu adalah insinyur senior (software, hardware, dan sistem operasi embedded Lin
 
 # TUJUAN
 Bangun image sistem operasi Linux berbasis **Debian minimalis** untuk **Orange Pi Zero 3 (Allwinner H618)** yang:
-1. Menampilkan **splash screen yang bisa dikonfigurasi** saat boot: 🆕 **gambar statis, animasi (urutan frame PNG), atau GIF**.
+1. Menampilkan **splash screen yang bisa dikonfigurasi** saat boot: 🆕 **gambar statis, animasi (urutan frame PNG), atau GIF** secara persisten (konsep Anbernic: animasi/gambar terus berputar di HDMI/LCD sampai aplikasi siap).
 2. Menjalankan aplikasi jadwal salat (SDL2 + Dear ImGui) secara fullscreen dan otomatis.
-3. Bisa diakses dan di-debug lewat **UART (serial console)**, **HDMI**, dan **SSH**.
-4. Seluruh kode, script, dan dokumentasi build tersimpan rapi di repository GitHub.
+3. Memiliki pemisahan konsol yang tegas: **booting yang ada tulisannya memakai mode UART (serial console)**, sedangkan **HDMI / LCD saat booting murni menampilkan animasi / gambar** tanpa bocoran teks.
+4. **Bebas dari bloatware**: OS dipastikan seringan mungkin, minimalis murni, tanpa desktop environment, tanpa cache paket, dan tanpa background service/timer yang tidak dibutuhkan.
+5. Bisa diakses dan di-debug lewat **UART (serial console)**, **HDMI**, dan **SSH**.
+6. Seluruh kode, script, dan dokumentasi build tersimpan rapi di repository GitHub.
 
 # RUANG LINGKUP
 - HANYA membangun OS (bootloader, kernel, rootfs, splash screen, akses jarak jauh, konfigurasi sistem, image akhir).
@@ -15,14 +17,14 @@ Bangun image sistem operasi Linux berbasis **Debian minimalis** untuk **Orange P
 # SPESIFIKASI TEKNIS
 | Komponen    | Ketentuan |
 |-------------|-----------|
-| Base OS     | Debian minimalis (debootstrap / rootfs minimal), arsitektur arm64 |
+| Base OS     | Debian minimalis (debootstrap / rootfs minimal), arsitektur arm64, **bebas bloatware** (bersih dari cache, man-db, dokumen, dan timer non-esensial) |
 | Kernel      | Linux versi stable terbaru yang mendukung H618 / Orange Pi Zero 3 |
 | Bootloader  | U-Boot yang mendukung Orange Pi Zero 3 (upstream bila tersedia) |
-| UI          | Display stack paling ringan untuk SDL2 (KMS/DRM atau X11/Wayland minimal), pilih yang paling stabil dan jelaskan alasannya |
-| Splash      | Plymouth dengan tema modul `script` (mendukung animasi frame). Gunakan alternatif hanya jika terbukti lebih baik, jelaskan alasannya |
+| UI          | Display stack paling ringan untuk SDL2 (KMS/DRM murni tanpa X11/desktop environment bloat) |
+| Splash      | Plymouth dengan tema modul `script` (mendukung animasi frame). Mode persistent ala Anbernic (tidak dimatikan oleh systemd sebelum aplikasi siap) |
 | 🆕 Konversi GIF | `ffmpeg` atau `imagemagick` (pilih yang paling kecil dependensinya) untuk mengubah GIF menjadi frame PNG |
 | Autostart   | Aplikasi jadwal salat berjalan otomatis saat boot (systemd service), restart otomatis jika crash |
-| Konsol      | UART debug (`ttyS0`, 115200 8N1) dan HDMI (`tty1`) aktif bersamaan |
+| Konsol      | UART debug (`ttyS0`, 115200 8N1) untuk **seluruh teks booting**, HDMI (`tty1`) **khusus grafis animasi/gambar** |
 | Remote      | OpenSSH server aktif saat boot |
 
 # 🆕 SPLASH SCREEN: GAMBAR / ANIMASI / GIF (dinamis via config)
@@ -82,10 +84,11 @@ ROTATION=0                        # 0 | 90 | 180 | 270
 
 # OUTPUT KONSOL: UART + HDMI
 ## Perilaku
-- **UART**: kernel cmdline memakai `console=ttyS0,115200`; log U-Boot, kernel, dan systemd muncul di serial. Aktifkan `serial-getty@ttyS0.service`.
-- **HDMI**: `console=tty1` + DRM/KMS aktif. HDMI menampilkan splash lalu aplikasi jadwal salat.
-- Urutan cmdline: `console=tty1 console=ttyS0,115200`, sehingga `/dev/console` adalah UART dan log error penting tetap terlihat di serial.
-- **Splash hanya tampil di HDMI.** Log boot di UART tetap lengkap. Atur `loglevel` agar UART informatif dan HDMI bersih; jelaskan di `HowTo.md`.
+- **UART (Mode Teks)**: Semua booting yang ada tulisannya (log U-Boot, kernel printk, dan systemd `[ OK ]` unit status) **HANYA muncul di UART** (`console=ttyS0,115200` di board / `ttyAMA0` di QEMU). Aktifkan `serial-getty` autologin user `jws`.
+- **HDMI / LCD (Mode Grafis)**: Layar HDMI / LCD saat booting **MURNI menampilkan animasi / gambar** splash tanpa ada teks boot log sedikit pun (`quiet splash loglevel=3 plymouth.ignore-serial-consoles vt.global_cursor_default=0`).
+- Urutan cmdline: `console=tty1 console=ttyS0,115200`, sehingga `/dev/console` adalah UART dan seluruh log error serta status boot keluar di serial.
+- **Splash hanya tampil di HDMI.** Layar HDMI tidak menampilkan log boot dan kursor konsol dimatikan.
+- Layanan pemati splash bawaan systemd (`plymouth-quit.service`, `plymouth-quit-wait.service`, dan `getty@tty1.service`) **wajib di-mask** agar animasi di HDMI/LCD tidak tertutup atau beralih ke teks sebelum aplikasi siap (konsep Anbernic).
 - Siapkan `getty` di `tty2` untuk login lewat keyboard HDMI tanpa mengganggu aplikasi di `tty1`.
 - Dokumentasikan di `HowTo.md`: pin UART debug Orange Pi Zero 3 (TX, RX, GND), level 3.3V, perintah koneksi (contoh: `picocom -b 115200 /dev/ttyUSB0`).
 
@@ -207,6 +210,9 @@ SERIAL_BAUD=115200
 
 # ATURAN
 - **Dilarang burn ke SD card** sebelum semua kriteria lulus uji terpenuhi.
+- **Anti-Bloatware Wajib**: OS harus seringan mungkin. Dilarang menyertakan desktop environment, browser, package cache APT, man-db/doc cache, atau kernel duplikat. Timer background yang tidak perlu (`apt-daily`, `man-db`, dll) wajib dinonaktifkan.
+- **Pemisahan Tampilan**: Booting yang ada tulisannya wajib memakai mode UART; HDMI/LCD bootingnya murni memakai animasi/gambar tanpa teks.
+- **Splash Persistent (Ala Anbernic)**: Splash di HDMI/LCD tidak boleh mati di tengah boot. Hanya aplikasi utama yang berhak mematikan splash saat UI siap.
 - Jika ada keputusan teknis yang ambigu, pilih opsi paling sederhana dan stabil, lalu catat alasannya di dokumentasi.
 - Jika terblokir, jangan menebak: catat masalah, penyebab dugaan, dan solusi alternatif.
 - Jangan pernah mempublikasikan rahasia (token, password WiFi, kunci) ke GitHub.
