@@ -20,19 +20,15 @@ Window.SetBackgroundBottomColor(bg_r, bg_g, bg_b);
 // Sprite utama container animasi
 screen_sprite = Sprite();
 
-// Global layout variables
+// Global layout & responsif state
+scaled_ready = 0;
 anim_pos_y = 0;
-anim_height = 320;
+anim_dim = 320;
 
 if (mode == "image") {
     raw_img = Image("splash.png");
     if (!raw_img) {
         raw_img = Image("default_logo.png");
-    }
-
-    if (raw_img) {
-        screen_sprite.SetImage(raw_img);
-        screen_sprite.SetOpacity(1);
     }
 
     fun refresh_callback () {
@@ -45,21 +41,33 @@ if (mode == "image") {
         if (!x) x = 0;
         if (!y) y = 0;
 
-        if (raw_img) {
-            iw = raw_img.GetWidth();
-            ih = raw_img.GetHeight();
-            pos_x = x + (w - iw) / 2;
-            pos_y = y + (h - ih) / 2 - 40;
-            if (position_mode == "top") {
-                pos_y = y + h * 0.15;
-            } else if (position_mode == "bottom") {
-                pos_y = y + h * 0.7 - ih;
+        if (scaled_ready == 0 && raw_img) {
+            // Skala responsif: 40% dari tinggi layar
+            target_dim = h * 4 / 10;
+            if (target_dim < 160) target_dim = 160;
+            if (target_dim > 480) target_dim = 480;
+
+            scaled_img = raw_img.Scale(target_dim, target_dim);
+            if (scaled_img) {
+                screen_sprite.SetImage(scaled_img);
+                anim_dim = target_dim;
+            } else {
+                screen_sprite.SetImage(raw_img);
+                anim_dim = raw_img.GetHeight();
             }
-            anim_pos_y = pos_y;
-            anim_height = ih;
-            screen_sprite.SetPosition(pos_x, pos_y, 10);
-            screen_sprite.SetOpacity(1);
+            scaled_ready = 1;
         }
+
+        pos_x = x + (w - anim_dim) / 2;
+        pos_y = y + (h - anim_dim) / 2 - 30;
+        if (position_mode == "top") {
+            pos_y = y + h * 0.15;
+        } else if (position_mode == "bottom") {
+            pos_y = y + h * 0.7 - anim_dim;
+        }
+        anim_pos_y = pos_y;
+        screen_sprite.SetPosition(pos_x, pos_y, 10);
+        screen_sprite.SetOpacity(1);
     }
 
     refresh_callback();
@@ -67,14 +75,13 @@ if (mode == "image") {
 
 } else {
     // Mode Animation / Frames / GIF
-    // Plymouth Image() secara otomatis meresolusi path relatif terhadap ImageDir
     for (i = 1; i <= frame_count; i++) {
         idx_str = "";
         if (i < 10) idx_str = "00" + i;
         else if (i < 100) idx_str = "0" + i;
         else idx_str = "" + i;
 
-        frames[i] = Image("frame_" + idx_str + ".png");
+        raw_frames[i] = Image("frame_" + idx_str + ".png");
     }
 
     current_frame = 1;
@@ -90,6 +97,21 @@ if (mode == "image") {
         y = Window.GetY();
         if (!x) x = 0;
         if (!y) y = 0;
+
+        // Penskalaan responsif satu kali saat resolusi terdeteksi
+        if (scaled_ready == 0) {
+            target_dim = h * 4 / 10;
+            if (target_dim < 160) target_dim = 160;
+            if (target_dim > 480) target_dim = 480;
+            anim_dim = target_dim;
+
+            for (i = 1; i <= frame_count; i++) {
+                if (raw_frames[i]) {
+                    frames[i] = raw_frames[i].Scale(target_dim, target_dim);
+                }
+            }
+            scaled_ready = 1;
+        }
 
         if (anim_finished == 0 && frame_count > 1) {
             frame_timer++;
@@ -115,18 +137,16 @@ if (mode == "image") {
             img = frames[1];
         }
 
+        pos_x = x + (w - anim_dim) / 2;
+        pos_y = y + (h - anim_dim) / 2 - 30;
+        if (position_mode == "top") {
+            pos_y = y + h * 0.15;
+        } else if (position_mode == "bottom") {
+            pos_y = y + h * 0.7 - anim_dim;
+        }
+        anim_pos_y = pos_y;
+
         if (img) {
-            iw = img.GetWidth();
-            ih = img.GetHeight();
-            pos_x = x + (w - iw) / 2;
-            pos_y = y + (h - ih) / 2 - 40;
-            if (position_mode == "top") {
-                pos_y = y + h * 0.15;
-            } else if (position_mode == "bottom") {
-                pos_y = y + h * 0.7 - ih;
-            }
-            anim_pos_y = pos_y;
-            anim_height = ih;
             screen_sprite.SetImage(img);
             screen_sprite.SetPosition(pos_x, pos_y, 10);
             screen_sprite.SetOpacity(1);
@@ -152,9 +172,9 @@ if (text_msg != "") {
             if (!x) x = 0;
             if (!y) y = 0;
             tx = x + (w - text_image.GetWidth()) / 2;
-            ty = anim_pos_y + anim_height + 20;
+            ty = anim_pos_y + anim_dim + 20;
             if (ty + text_image.GetHeight() > h) {
-                ty = h - text_image.GetHeight() - 20;
+                ty = h - text_image.GetHeight() - 15;
             }
             text_sprite.SetPosition(tx, ty, 20);
             text_sprite.SetOpacity(1);
