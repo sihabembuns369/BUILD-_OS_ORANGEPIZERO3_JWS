@@ -10,10 +10,13 @@ Group=jws
 PAMName=login
 TTYPath=/dev/tty1
 StandardInput=tty
-StandardOutput=tty
-StandardError=tty
+StandardOutput=journal+console
+StandardError=journal+console
 Environment=SDL_VIDEODRIVER=kmsdrm
 Environment=XDG_RUNTIME_DIR=/run/user/1000
+
+# Lepaskan DRM master Plymouth sebelum aplikasi mulai, pertahankan tampilan frame terakhir
+ExecStartPre=+/usr/bin/plymouth quit --retain-splash
 
 ExecStart=/usr/local/bin/jws-app
 Restart=always

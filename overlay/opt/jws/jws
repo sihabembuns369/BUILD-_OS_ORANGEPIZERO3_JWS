@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # /opt/jws/jws
-# Launcher Aplikasi Jadwal Salat ImGui untuk Orange Pi Zero 3
+# Launcher Aplikasi Jadwal Salat ImGui untuk Orange Pi Zero 3 & QEMU
 
 APP_DIR="/opt/jws"
 cd "$APP_DIR" || exit 1
@@ -9,11 +9,22 @@ export LD_LIBRARY_PATH="$APP_DIR/lib:$LD_LIBRARY_PATH"
 
 # Mode framebuffer DRM/KMS jika berjalan langsung di tty tanpa server display X11/Wayland
 if [ -z "$DISPLAY" ] && [ -z "$WAYLAND_DISPLAY" ]; then
-    export SDL_VIDEODRIVER=KMSDRM
+    export SDL_VIDEODRIVER=kmsdrm
 fi
 
-# Transisi mulus ala Anbernic: Tutup splash tepat saat aplikasi mulai berjalan
-plymouth quit 2>/dev/null || true
+# Deteksi lingkungan QEMU (virtio-gpu 2D) vs Hardware Fisik (Mali-G31 Panfrost)
+# Jika driver kartu adalah virtio-gpu dan hardware GL tidak ada, gunakan fallback kms_swrast
+if [ -d "/sys/bus/pci/drivers/virtio-pci" ] || grep -q "QEMU" /proc/cpuinfo 2>/dev/null; then
+    # Di lingkungan emulasi QEMU virtio-gpu
+    if [ ! -e "/dev/dri/renderD128" ]; then
+        export LIBGL_ALWAYS_SOFTWARE=1
+        export MESA_LOADER_DRIVER_OVERRIDE=kms_swrast
+    fi
+fi
 
+# Pastikan plymouth benar-benar quit sebelum mengambil alih DRM
+sudo /usr/bin/plymouth quit --retain-splash 2>/dev/null || /usr/bin/plymouth quit 2>/dev/null || true
+
+echo "[JWS] Meluncurkan aplikasi jadwal salat ImGui..."
 # Eksekusi aplikasi Jadwal Salat ImGui
 exec "$APP_DIR/jadwalsholat_imgui" "$@"

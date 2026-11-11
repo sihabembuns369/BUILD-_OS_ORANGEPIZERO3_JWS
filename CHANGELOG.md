@@ -1,5 +1,17 @@
 # CHANGELOG
 
+## [2026-11-11] Fix Splash Stuck: Transisi DRM Master & Fallback KMSDRM
+- Apa yang diubah:
+  - Mengonfigurasi `ExecStartPre=+/usr/bin/plymouth quit --retain-splash` pada `overlay/etc/systemd/system/jws.service` agar Plymouth melepaskan kepemilikan DRM master `/dev/dri/card0` sebagai root sebelum aplikasi JWS dimulai, sekaligus mempertahankan frame visual terakhir tanpa kedipan layar hitam.
+  - Memperbarui `/opt/jws/jws` dengan deteksi lingkungan emulasi QEMU: mengaktifkan fallback `LIBGL_ALWAYS_SOFTWARE=1` dan `MESA_LOADER_DRIVER_OVERRIDE=kms_swrast` jika kartu grafis adalah virtio-gpu tanpa akselerasi GL native host, mencegah kegagalan inisialisasi EGL KMSDRM di QEMU sambil tetap mempertahankan akselerasi penuh Panfrost GPU di board fisik.
+  - Mengubah output log `jws.service` ke `StandardOutput=journal+console` dan `StandardError=journal+console` agar status runtime aplikasi terpantau langsung di UART serial.
+  - Merakit ulang berkas disk image `output/orangepi_zero3_jws.img` (3.0 GB).
+- Alasan: Mengatasi animasi splash screen yang macet/berputar terus menerus akibat konflik DRM master antara Plymouth dan SDL2 KMSDRM.
+- File/komponen terdampak: `overlay/etc/systemd/system/jws.service`, `overlay/opt/jws/jws`, `output/orangepi_zero3_jws.img`, `CHANGELOG.md`.
+- Hasil uji: DRM master dilepas secara tertib dengan `--retain-splash`, fallback EGL KMSDRM aktif di QEMU, dan aplikasi JWS dapat meluncur menggantikan splash.
+- Commit / tag: `fix(jws): perbaiki transisi drm master plymouth dan fallback kmsdrm di qemu`
+
+
 ## [2026-11-11] Fix Boot Logo Plymouth: Syntax Script & Enable Sysinit Service
 - Apa yang diubah:
   - Memperbaiki kesalahan sintaks parser Plymouth pada `jws-animated.script.template`, `jws-animated.script`, dan `splash-apply`: mengganti semua komentar gaya C (`//`) menjadi komentar standar Plymouth (`#`). Plymouth script parser menganggap `//` sebagai operator pembagian ganda yang memicu syntax error dan membatalkan inisialisasi tema.
