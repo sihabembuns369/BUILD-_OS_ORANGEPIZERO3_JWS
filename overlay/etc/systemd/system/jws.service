@@ -1,23 +1,20 @@
 [Unit]
 Description=Jadwal Waktu Salat (JWS) SDL2 Kiosk Application
-After=systemd-user-sessions.service plymouth-start.service
+After=systemd-user-sessions.service plymouth-start.service splash-apply.service systemd-udev-trigger.service
 Conflicts=getty@tty1.service
 
 [Service]
 Type=simple
 User=jws
 Group=jws
-PAMName=login
-TTYPath=/dev/tty1
-StandardInput=tty
-StandardOutput=journal+console
-StandardError=journal+console
+SupplementaryGroups=video render input audio tty dialout
+StandardOutput=journal
+StandardError=journal
 Environment=SDL_VIDEODRIVER=kmsdrm
+Environment=SDL_AUDIODRIVER=dummy
 Environment=XDG_RUNTIME_DIR=/run/user/1000
 
-# Lepaskan DRM master Plymouth sebelum aplikasi mulai, pertahankan tampilan frame terakhir
-ExecStartPre=+/usr/bin/plymouth quit --retain-splash
-
+ExecStartPre=+/bin/sh -c 'chgrp -R video /dev/dri /dev/fb* 2>/dev/null || true; chmod -R g+rw /dev/dri /dev/fb* /dev/tty1 2>/dev/null || true; chgrp -R input /dev/input 2>/dev/null || true; chmod -R g+rw /dev/input 2>/dev/null || true; /usr/bin/plymouth quit --retain-splash 2>/dev/null || true'
 ExecStart=/usr/local/bin/jws-app
 Restart=always
 RestartSec=3

@@ -39,7 +39,7 @@ fi
 
 KERNEL_OPTS=""
 if [ -f "$KERNEL_IMG" ]; then
-    KERNEL_OPTS="-kernel ${KERNEL_IMG} -append \"root=/dev/vda2 rw rootwait console=tty1 console=ttyAMA0,115200 quiet splash loglevel=3 plymouth.ignore-serial-consoles vt.global_cursor_default=0\""
+    KERNEL_OPTS="-kernel ${KERNEL_IMG} -append \"root=/dev/vda2 rw rootwait console=tty1 console=ttyAMA0,115200 quiet splash loglevel=3 plymouth.ignore-serial-consoles plymouth.ignore-udev vt.global_cursor_default=0\""
 fi
 
 SSH_PORT="${SSH_PORT:-22220}"

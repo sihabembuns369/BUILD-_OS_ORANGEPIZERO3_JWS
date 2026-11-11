@@ -31,16 +31,16 @@ screen_y = Window.GetY();
 if (!screen_x) screen_x = 0;
 if (!screen_y) screen_y = 0;
 
-# Ukuran responsif: 35% dari tinggi layar (min 140px, max 300px)
-target_dim = Math.Int(screen_h * 0.35);
-if (target_dim > 300) target_dim = 300;
+# Ukuran responsif: 45% dari tinggi layar (min 140px, max 320px agar pas dengan frame 320x320 tanpa scaling ulang)
+target_dim = Math.Int(screen_h * 0.45);
+if (target_dim > 320) target_dim = 320;
 if (target_dim < 140) target_dim = 140;
 
 global.anim_dim = target_dim;
 
 # Posisi terpusat responsif
 pos_x = screen_x + Math.Int((screen_w - target_dim) / 2);
-pos_y = screen_y + Math.Int((screen_h - target_dim) / 2) - 30;
+pos_y = screen_y + Math.Int((screen_h - target_dim) / 2) - 20;
 
 if (position_mode == "top") {
     pos_y = screen_y + Math.Int(screen_h * 0.12);
@@ -60,7 +60,7 @@ if (mode == "image") {
     if (raw_img) {
         iw = raw_img.GetWidth();
         ih = raw_img.GetHeight();
-        if (iw > 0 && ih > 0) {
+        if (iw > 0 && ih > 0 && ih != target_dim) {
             scale_ratio = target_dim / ih;
             new_w = Math.Int(iw * scale_ratio);
             new_h = Math.Int(ih * scale_ratio);
@@ -84,7 +84,7 @@ if (mode == "image") {
             cur_y = Window.GetY();
             if (!cur_x) cur_x = 0;
             if (!cur_y) cur_y = 0;
-            global.screen_sprite.SetPosition(cur_x + Math.Int((w - img_w) / 2), cur_y + Math.Int((h - img_h) / 2) - 30, 10);
+            global.screen_sprite.SetPosition(cur_x + Math.Int((w - img_w) / 2), cur_y + Math.Int((h - img_h) / 2) - 20, 10);
             global.screen_sprite.SetOpacity(1);
         }
     }
@@ -93,20 +93,14 @@ if (mode == "image") {
 
 } else {
     # Mode Animation / Frames / GIF
-    for (i = 0; i < frame_count; i++) {
-        num = i + 1;
-        idx_str = "";
-        if (num < 10) idx_str = "00" + num;
-        else if (num < 100) idx_str = "0" + num;
-        else idx_str = "" + num;
-
-        raw_frame = Image("frame_" + idx_str + ".png");
-        if (raw_frame) {
-            global.frames[i] = raw_frame.Scale(target_dim, target_dim);
+    # Muat frame pertama segera agar boot logo langsung tampil seketika saat power dinyalakan
+    raw_first = Image("frame_001.png");
+    if (raw_first) {
+        if (raw_first.GetWidth() == target_dim && raw_first.GetHeight() == target_dim) {
+            global.frames[0] = raw_first;
+        } else {
+            global.frames[0] = raw_first.Scale(target_dim, target_dim);
         }
-    }
-
-    if (global.frames[0]) {
         global.screen_sprite.SetImage(global.frames[0]);
         global.screen_sprite.SetPosition(pos_x, pos_y, 10);
         global.screen_sprite.SetOpacity(1);
@@ -129,6 +123,23 @@ if (mode == "image") {
                 }
             }
 
+            if (!global.frames[frame_idx]) {
+                num = frame_idx + 1;
+                idx_str = "";
+                if (num < 10) idx_str = "00" + num;
+                else if (num < 100) idx_str = "0" + num;
+                else idx_str = "" + num;
+
+                raw_frame = Image("frame_" + idx_str + ".png");
+                if (raw_frame) {
+                    if (raw_frame.GetWidth() == target_dim && raw_frame.GetHeight() == target_dim) {
+                        global.frames[frame_idx] = raw_frame;
+                    } else {
+                        global.frames[frame_idx] = raw_frame.Scale(target_dim, target_dim);
+                    }
+                }
+            }
+
             cur_frame = global.frames[frame_idx];
             if (cur_frame) {
                 global.screen_sprite.SetImage(cur_frame);
@@ -141,7 +152,7 @@ if (mode == "image") {
                 cur_y = Window.GetY();
                 if (!cur_x) cur_x = 0;
                 if (!cur_y) cur_y = 0;
-                global.screen_sprite.SetPosition(cur_x + Math.Int((w - target_dim) / 2), cur_y + Math.Int((h - target_dim) / 2) - 30, 10);
+                global.screen_sprite.SetPosition(cur_x + Math.Int((w - target_dim) / 2), cur_y + Math.Int((h - target_dim) / 2) - 20, 10);
             }
 
             global.progress++;
@@ -176,6 +187,5 @@ fun dummy_message_callback (text) {
 Plymouth.SetDisplayMessageFunction(dummy_message_callback);
 
 fun quit_callback () {
-    global.screen_sprite.SetOpacity(0);
 }
 Plymouth.SetQuitFunction(quit_callback);

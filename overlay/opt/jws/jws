@@ -6,6 +6,7 @@ APP_DIR="/opt/jws"
 cd "$APP_DIR" || exit 1
 
 export LD_LIBRARY_PATH="$APP_DIR/lib:$LD_LIBRARY_PATH"
+export SDL_AUDIODRIVER="${SDL_AUDIODRIVER:-dummy}"
 
 # Mode framebuffer DRM/KMS jika berjalan langsung di tty tanpa server display X11/Wayland
 if [ -z "$DISPLAY" ] && [ -z "$WAYLAND_DISPLAY" ]; then
@@ -13,18 +14,39 @@ if [ -z "$DISPLAY" ] && [ -z "$WAYLAND_DISPLAY" ]; then
 fi
 
 # Deteksi lingkungan QEMU (virtio-gpu 2D) vs Hardware Fisik (Mali-G31 Panfrost)
-# Jika driver kartu adalah virtio-gpu dan hardware GL tidak ada, gunakan fallback kms_swrast
-if [ -d "/sys/bus/pci/drivers/virtio-pci" ] || grep -q "QEMU" /proc/cpuinfo 2>/dev/null; then
-    # Di lingkungan emulasi QEMU virtio-gpu
-    if [ ! -e "/dev/dri/renderD128" ]; then
-        export LIBGL_ALWAYS_SOFTWARE=1
-        export MESA_LOADER_DRIVER_OVERRIDE=kms_swrast
-    fi
+if [ -d "/sys/bus/pci/drivers/virtio-pci" ] || [ -d "/sys/module/virtio_gpu" ] || grep -q "QEMU" /proc/cpuinfo 2>/dev/null; then
+    export LIBGL_ALWAYS_SOFTWARE=1
+    export MESA_LOADER_DRIVER_OVERRIDE=kms_swrast
+    export GALLIUM_DRIVER=llvmpipe
+    export LP_NUM_THREADS=4
 fi
 
-# Pastikan plymouth benar-benar quit sebelum mengambil alih DRM
-sudo /usr/bin/plymouth quit --retain-splash 2>/dev/null || /usr/bin/plymouth quit 2>/dev/null || true
+# Pastikan MIN_DURATION dari /boot/splash.conf terpenuhi sebelum menutup splash
+MIN_DUR=3
+if [ -f /boot/splash.conf ]; then
+    while IFS='=' read -r k v; do
+        k="${k//[[:space:]]/}"
+        if [ "$k" = "MIN_DURATION" ]; then
+            v="${v%%#*}"
+            v="${v//[[:space:]\"\']/}"
+            [[ "$v" =~ ^[0-9]+$ ]] && MIN_DUR="$v"
+            break
+        fi
+    done < /boot/splash.conf
+fi
+UPTIME_SEC="${SECONDS}"
+if [ -r /proc/uptime ]; then
+    read -r up _ < /proc/uptime
+    UPTIME_SEC="${up%%.*}"
+fi
+if [ "${UPTIME_SEC:-10}" -lt "$MIN_DUR" ]; then
+    sleep $((MIN_DUR - UPTIME_SEC))
+fi
+
+# Jika plymouth masih berjalan (mis. dijalankan manual), lepaskan DRM master Plymouth
+if [ -e /run/plymouth/pid ]; then
+    sudo /usr/bin/plymouth quit --retain-splash 2>/dev/null || /usr/bin/plymouth quit --retain-splash 2>/dev/null || true
+fi
 
 echo "[JWS] Meluncurkan aplikasi jadwal salat ImGui..."
-# Eksekusi aplikasi Jadwal Salat ImGui
 exec "$APP_DIR/jadwalsholat_imgui" "$@"

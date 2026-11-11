@@ -1,5 +1,18 @@
 # CHANGELOG
 
+## [2026-11-11] Fix Instant Boot Splash (plymouth.ignore-udev), Lazy Frame Loading & Transisi JWS Mulus
+- Apa yang diubah:
+  - Menambahkan parameter `plymouth.ignore-udev` pada `plymouth-start.service`, `scripts/04_create_image.sh` (`boot.cmd`), dan `runQemu`, serta menghapus dependensi `After=systemd-udevd.service systemd-udev-trigger.service` agar `plymouthd` langsung membuka `/dev/dri/card0` (dari `devtmpfs`) pada gelombang pertama `sysinit.target` tepat saat `Welcome to Debian GNU/Linux 12 (bookworm)!` tanpa menunggu coldplug `udev` (`TAGS=":seat:"`) atau `DeviceTimeout`.
+  - Menghapus argumen `--attach-to-session` dari `plymouth-start.service` agar `plymouthd` tidak membajak `/dev/console` (`TIOCCONS`) dari UART serial (`ttyAMA0`/`ttyS0`), sehingga seluruh log `[ OK ]` systemd tetap mengalir 100% di UART sementara HDMI (`tty1`) murni menampilkan animasi splash.
+  - Membuat `overlay/etc/plymouth/plymouthd.conf` dengan `ShowDelay=0` dan `DeviceTimeout=1`, serta mengoptimalkan `jws-animated.script` & `jws-animated.script.template` menggunakan *lazy frame loading* (memuat `frame_001.png` seketika saat inisialisasi dan memuat frame berikutnya secara bertahap di `refresh_callback`) serta ukuran native `320x320` tanpa penskalaan bilinear yang berat.
+  - Mengoptimalkan parser konfigurasi `overlay/usr/local/bin/splash-apply` dengan *pure-bash parameter expansion* dan menyertakan cache awal `/var/cache/splash/last.hash`, memangkas waktu CPU `splash-apply.service` dari >10 detik menjadi ~1 detik saat cache valid.
+  - Memperbaiki `overlay/etc/systemd/system/jws.service` dan `overlay/opt/jws/jws`: mengatur `SDL_AUDIODRIVER=dummy` (karena pustaka `libSDL2-2.0.so.0.2800.5` bawaan aplikasi dikompilasi tanpa target `alsa`), mengaktifkan `LIBGL_ALWAYS_SOFTWARE=1`, `MESA_LOADER_DRIVER_OVERRIDE=kms_swrast`, `GALLIUM_DRIVER=llvmpipe`, dan `LP_NUM_THREADS=4` pada `virtio_gpu` QEMU (meskipun `/dev/dri/renderD128` ada), serta menghapus `PAMName=login` dan `TTYPath=/dev/tty1` yang sebelumnya menahan peluncuran selama 7 detik karena menunggu kunci terminal `/dev/tty1` dari `plymouthd`.
+  - Merakit ulang berkas disk image `output/orangepi_zero3_jws.img` (3.0 GB).
+- Alasan: Memastikan boot logo Plymouth langsung tampil di layar begitu power/QEMU dinyalakan (sebelum layanan lain berjalan), menjaga log teks tetap di UART, dan menjamin aplikasi `jadwalsholat_imgui` tampil fullscreen dengan mulus setelah splash.
+- File/komponen terdampak: `overlay/etc/plymouth/plymouthd.conf`, `overlay/etc/systemd/system/plymouth-start.service`, `overlay/etc/systemd/system/jws.service`, `overlay/opt/jws/jws`, `overlay/usr/local/bin/splash-apply`, `overlay/usr/share/plymouth/themes/jws-animated/jws-animated.script*`, `overlay/var/cache/splash/last.hash`, `scripts/04_create_image.sh`, `runQemu`, `CHANGELOG.md`.
+- Hasil uji (QEMU): Boot logo tampil dalam ~1-2 detik sejak kernel masuk `sysinit.target`, log `[ OK ]` mengalir lengkap di UART, dan aplikasi `jadwalsholat_imgui` berjalan aktif (`active (running)`) menampilkan UI penuh di layar 1280x720.
+- Commit / tag: `fix(splash,jws): tampilkan boot logo seketika via ignore-udev dan perbaiki render kmsdrm jws`
+
 ## [2026-11-11] Fix Splash Stuck: Transisi DRM Master & Fallback KMSDRM
 - Apa yang diubah:
   - Mengonfigurasi `ExecStartPre=+/usr/bin/plymouth quit --retain-splash` pada `overlay/etc/systemd/system/jws.service` agar Plymouth melepaskan kepemilikan DRM master `/dev/dri/card0` sebagai root sebelum aplikasi JWS dimulai, sekaligus mempertahankan frame visual terakhir tanpa kedipan layar hitam.

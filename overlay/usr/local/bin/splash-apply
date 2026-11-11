@@ -40,13 +40,14 @@ err() {
 
 mkdir -p "$CACHE_DIR" "$THEME_DIR"
 
-# Aman membaca config tanpa eval
+# Aman membaca config secara cepat menggunakan ekspansi parameter Bash murni (tanpa subshell)
 if [ -f "$CONF_FILE" ]; then
     while IFS='=' read -r key val || [ -n "$key" ]; do
-        key=$(echo "$key" | tr -d ' \r\t')
-        [[ "$key" =~ ^#.*$ ]] && continue
-        [ -z "$key" ] && continue
-        val=$(echo "$val" | sed -E 's/[ \t]+#.*$//' | sed -e 's/^[ \t]*//' -e 's/[ \t\r]*$//')
+        key="${key//[[:space:]]/}"
+        [[ -z "$key" || "$key" == \#* ]] && continue
+        val="${val%%#*}"
+        val="${val#"${val%%[![:space:]]*}"}"
+        val="${val%"${val##*[![:space:]]}"}"
         val="${val%\"}"
         val="${val#\"}"
         val="${val%\'}"
@@ -77,7 +78,7 @@ fi
 if [ "${ENABLED,,}" = "no" ]; then
     log "Splash dinonaktifkan via config."
     CURRENT_HASH="DISABLED"
-    if [ -f "$HASH_FILE" ] && [ "$(cat "$HASH_FILE" 2>/dev/null)" = "$CURRENT_HASH" ]; then
+    if [ -f "$HASH_FILE" ] && [ "$(<"$HASH_FILE")" = "$CURRENT_HASH" ]; then
         exit 0
     fi
     if command -v plymouth-set-default-theme >/dev/null 2>&1; then
@@ -86,19 +87,6 @@ if [ "${ENABLED,,}" = "no" ]; then
     echo "$CURRENT_HASH" > "$HASH_FILE"
     exit 0
 fi
-
-# Pure Bash hex color to RGB float (0.000 - 1.000)
-hex_to_rgb_float() {
-    local hex="${1#\#}"
-    [ ${#hex} -ne 6 ] && hex="000000"
-    local r=$((16#${hex:0:2}))
-    local g=$((16#${hex:2:2}))
-    local b=$((16#${hex:4:2}))
-    printf "0.%03d 0.%03d 0.%03d" $((r * 1000 / 255)) $((g * 1000 / 255)) $((b * 1000 / 255))
-}
-
-read -r BG_R BG_G BG_B <<< "$(hex_to_rgb_float "$BACKGROUND_COLOR")"
-read -r TXT_R TXT_G TXT_B <<< "$(hex_to_rgb_float "$TEXT_COLOR")"
 
 # Validasi mode
 TARGET_MEDIA=""
@@ -124,21 +112,34 @@ calc_hash() {
     local h1=""
     local h2=""
     if [ -f "$CONF_FILE" ]; then
-        h1=$(sha256sum "$CONF_FILE" 2>/dev/null | cut -d' ' -f1)
+        read -r h1 _ < <(sha256sum "$CONF_FILE" 2>/dev/null)
     fi
     if [ -f "$TARGET_MEDIA" ]; then
-        h2=$(sha256sum "$TARGET_MEDIA" 2>/dev/null | cut -d' ' -f1)
+        read -r h2 _ < <(sha256sum "$TARGET_MEDIA" 2>/dev/null)
     elif [ -d "$TARGET_MEDIA" ]; then
-        h2=$(find "$TARGET_MEDIA" -maxdepth 1 -type f 2>/dev/null | sort | head -n 60 | sha256sum | cut -d' ' -f1)
+        read -r h2 _ < <(find "$TARGET_MEDIA" -maxdepth 1 -type f 2>/dev/null | sort | head -n 60 | sha256sum)
     fi
     echo "${h1}_${h2}_${MODE}_${FPS}_${LOOP}_${IMAGE_SCALE}_${POSITION}"
 }
 
 CURRENT_HASH="$(calc_hash)"
-if [ -f "$HASH_FILE" ] && [ "$(cat "$HASH_FILE" 2>/dev/null)" = "$CURRENT_HASH" ]; then
+if [ -f "$HASH_FILE" ] && [ "$(<"$HASH_FILE")" = "$CURRENT_HASH" ]; then
     log "Konfigurasi dan media tidak berubah (cache valid). Melewati pembaruan."
     exit 0
 fi
+
+# Pure Bash hex color to RGB float (0.000 - 1.000)
+hex_to_rgb_float() {
+    local hex="${1#\#}"
+    [ ${#hex} -ne 6 ] && hex="000000"
+    local r=$((16#${hex:0:2}))
+    local g=$((16#${hex:2:2}))
+    local b=$((16#${hex:4:2}))
+    printf "0.%03d 0.%03d 0.%03d" $((r * 1000 / 255)) $((g * 1000 / 255)) $((b * 1000 / 255))
+}
+
+read -r BG_R BG_G BG_B <<< "$(hex_to_rgb_float "$BACKGROUND_COLOR")"
+read -r TXT_R TXT_G TXT_B <<< "$(hex_to_rgb_float "$TEXT_COLOR")"
 
 log "Perubahan terdeteksi atau cache kosong. Memperbarui tema splash..."
 

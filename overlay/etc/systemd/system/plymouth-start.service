@@ -1,8 +1,6 @@
 [Unit]
 Description=Show Plymouth Boot Screen
 DefaultDependencies=no
-Wants=systemd-udev-trigger.service systemd-udevd.service
-After=systemd-udev-trigger.service systemd-udevd.service
 Before=sysinit.target
 ConditionKernelCommandLine=!plymouth.enable=0
 ConditionKernelCommandLine=!nosplash
@@ -10,7 +8,8 @@ ConditionVirtualization=!container
 IgnoreOnIsolate=true
 
 [Service]
-ExecStart=/usr/sbin/plymouthd --mode=boot --pid-file=/run/plymouth/pid --attach-to-session
+ExecStartPre=-/bin/mkdir -p /run/plymouth
+ExecStart=/usr/sbin/plymouthd --mode=boot --pid-file=/run/plymouth/pid --kernel-command-line="splash plymouth.ignore-serial-consoles plymouth.ignore-udev"
 ExecStartPost=-/usr/bin/plymouth show-splash
 Type=forking
 RemainAfterExit=yes
