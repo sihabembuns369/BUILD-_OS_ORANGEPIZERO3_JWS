@@ -1,5 +1,18 @@
 # CHANGELOG
 
+## [2026-11-11] Fitur Autologin User jws dan Silent Booting untuk Splash Animasi Penuh
+- Apa yang diubah:
+  - Mengonfigurasi autologin untuk user `jws` pada konsol serial (`serial-getty@ttyS0` dan `serial-getty@ttyAMA0`) serta HDMI konsol cadangan (`getty@tty2`).
+  - Menghilangkan teks status boot systemd di HDMI display dengan menambahkan konfigurasi drop-in `overlay/etc/systemd/system.conf.d/10-quiet-boot.conf` (`ShowStatus=no`) serta parameter kernel `systemd.show_status=false rd.systemd.show_status=false` di `runQemu`.
+  - Mengunci cache frame animasi 24 frame GIF ke tema Plymouth sehingga animasi berputar secara kontinu sejak boot awal tanpa interupsi teks log sampai aplikasi jadwal salat siap.
+- Alasan: Permintaan pengguna untuk menampilkan animasi splash murni tanpa teks log boot dan mengaktifkan autologin tanpa meminta password.
+- File/komponen terdampak: `runQemu`, `overlay/etc/systemd/system.conf.d/10-quiet-boot.conf`, `overlay/etc/systemd/system/serial-getty@ttyS0.service.d/autologin.conf`, `overlay/etc/systemd/system/serial-getty@ttyAMA0.service.d/autologin.conf`, `overlay/etc/systemd/system/getty@tty2.service.d/autologin.conf`, `CHANGELOG.md`.
+- Hasil uji (QEMU / board fisik):
+  - Layar display HDMI sepenuhnya tenang memutar animasi GIF (24 frame looping).
+  - Teks log boot hanya diteruskan ke port UART serial.
+  - Login prompt serial UART langsung autologin ke user `jws` (`jws-pi login: jws (automatic login)`).
+- Commit / tag: `feat(boot): autologin user jws dan silent boot splash animasi`
+
 ## [2026-11-11] Fix Display KMS/DRM Built-in dan Transisi Mulus Plymouth Splash ke Aplikasi JWS
 - Apa yang diubah:
   - Mengubah driver DRM/KMS Allwinner (`CONFIG_DRM_SUN4I`, `CONFIG_DRM_SUN8I_DW_HDMI`, `CONFIG_DRM_SUN8I_MIXER`, `CONFIG_DRM_SUN8I_TCON_TOP`) dan Virtio-GPU (`CONFIG_DRM_VIRTIO_GPU`) dari modul (`=m`) menjadi built-in kernel (`=y`).
