@@ -1,5 +1,16 @@
 # CHANGELOG
 
+## [2026-11-11] Fix JWS Lag & Black Gap di Jendela QEMU (VirGL 3D & zoom-to-fit=off)
+- Apa yang diubah:
+  - Mengubah opsi display di `runQemu` dari `-device virtio-gpu-pci ... -display gtk,zoom-to-fit=on` menjadi `-device virtio-gpu-gl-pci,xres=${RES_X},yres=${RES_Y} -display gtk,gl=on,zoom-to-fit=off` serta menghapus emulasi perangkat audio PCI HDA yang tidak diperlukan.
+  - Memperbarui `overlay/opt/jws/jws` agar memeriksa bit fitur `VIRTIO_GPU_F_VIRGL` pada `/sys/bus/virtio/drivers/virtio_gpu/virtio*/features`: ketika `virtio-gpu-gl-pci` aktif (`VIRGL_ACTIVE=1`), aplikasi menggunakan akselerasi 3D VirGL (`virtio_gpu_dri.so`) yang mengalirkan rendering OpenGL langsung ke host, dan hanya melakukan fallback ke software `llvmpipe`/`kms_swrast` bila berjalan di mode 2D headless (`VIRGL_ACTIVE=0`).
+  - Menambahkan `Nice=-10` pada `overlay/etc/systemd/system/jws.service` untuk memprioritaskan penjadwalan CPU aplikasi utama.
+  - Merakit ulang berkas disk image `output/orangepi_zero3_jws.img` (3.0 GB).
+- Alasan: Menghilangkan gap hitam di bagian atas jendela GTK QEMU (akibat `zoom-to-fit=on` yang mengunci rasio jendela awal 4:3 `640x480` sebelum mode 16:9 `1280x720` aktif) dan mengatasi patah-patah/lag akibat software rendering `llvmpipe` di CPU emulasi ARM64.
+- File/komponen terdampak: `runQemu`, `overlay/opt/jws/jws`, `overlay/etc/systemd/system/jws.service`, `output/orangepi_zero3_jws.img`, `CHANGELOG.md`.
+- Hasil uji (QEMU): Beban CPU `jadwalsholat_imgui` turun dari ~81.5% menjadi ~39.6% dengan akselerasi VirGL (`GLSL feature level 410`), dan jendela GTK otomatis menyesuaikan ukuran 16:9 `1280x720` tanpa gap hitam.
+- Commit / tag: `fix(qemu,jws): aktifkan akselerasi virgl 3d otomatis dan hapus gap jendela gtk`
+
 ## [2026-11-11] Fix Instant Boot Splash (plymouth.ignore-udev), Lazy Frame Loading & Transisi JWS Mulus
 - Apa yang diubah:
   - Menambahkan parameter `plymouth.ignore-udev` pada `plymouth-start.service`, `scripts/04_create_image.sh` (`boot.cmd`), dan `runQemu`, serta menghapus dependensi `After=systemd-udevd.service systemd-udev-trigger.service` agar `plymouthd` langsung membuka `/dev/dri/card0` (dari `devtmpfs`) pada gelombang pertama `sysinit.target` tepat saat `Welcome to Debian GNU/Linux 12 (bookworm)!` tanpa menunggu coldplug `udev` (`TAGS=":seat:"`) atau `DeviceTimeout`.

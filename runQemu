@@ -27,14 +27,11 @@ RES_Y="${RES_Y:-720}"
 
 # Pilihan mode display: jika tidak ada DISPLAY (headless/ssh), fallback ke -display none
 DISPLAY_OPTS=""
-AUDIO_OPTS=""
 if [ -n "$DISPLAY" ]; then
-    DISPLAY_OPTS="-device virtio-gpu-pci,xres=${RES_X},yres=${RES_Y} -display gtk,zoom-to-fit=on"
-    AUDIO_OPTS="-audiodev pa,id=snd0 -device intel-hda -device hda-duplex,audiodev=snd0"
+    DISPLAY_OPTS="-device virtio-gpu-gl-pci,xres=${RES_X},yres=${RES_Y} -display gtk,gl=on,zoom-to-fit=off"
 else
     echo "Peringatan: Variabel DISPLAY tidak diset. Menjalankan dalam mode headless (-display none)."
     DISPLAY_OPTS="-device virtio-gpu-pci,xres=${RES_X},yres=${RES_Y} -display none"
-    AUDIO_OPTS="-audiodev none,id=snd0"
 fi
 
 KERNEL_OPTS=""
@@ -60,7 +57,6 @@ eval qemu-system-aarch64 \
   ${KERNEL_OPTS} \
   -drive file="${IMG_FILE}",format=raw,if=virtio \
   ${DISPLAY_OPTS} \
-  ${AUDIO_OPTS} \
   -serial stdio \
   -device virtio-keyboard-pci \
   -device virtio-mouse-pci \

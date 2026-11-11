@@ -13,12 +13,22 @@ if [ -z "$DISPLAY" ] && [ -z "$WAYLAND_DISPLAY" ]; then
     export SDL_VIDEODRIVER=kmsdrm
 fi
 
-# Deteksi lingkungan QEMU (virtio-gpu 2D) vs Hardware Fisik (Mali-G31 Panfrost)
+# Deteksi lingkungan QEMU: gunakan VirGL 3D native jika tersedia (virtio-gpu-gl-pci),
+# atau fallback ke software kms_swrast jika hanya virtio-gpu 2D tanpa VirGL.
 if [ -d "/sys/bus/pci/drivers/virtio-pci" ] || [ -d "/sys/module/virtio_gpu" ] || grep -q "QEMU" /proc/cpuinfo 2>/dev/null; then
-    export LIBGL_ALWAYS_SOFTWARE=1
-    export MESA_LOADER_DRIVER_OVERRIDE=kms_swrast
-    export GALLIUM_DRIVER=llvmpipe
-    export LP_NUM_THREADS=4
+    VIRGL_ACTIVE=0
+    for feat in /sys/bus/virtio/drivers/virtio_gpu/virtio*/features; do
+        if [ -r "$feat" ] && [ "$(head -c 1 "$feat")" = "1" ]; then
+            VIRGL_ACTIVE=1
+            break
+        fi
+    done
+    if [ "$VIRGL_ACTIVE" -eq 0 ]; then
+        export LIBGL_ALWAYS_SOFTWARE=1
+        export MESA_LOADER_DRIVER_OVERRIDE=kms_swrast
+        export GALLIUM_DRIVER=llvmpipe
+        export LP_NUM_THREADS=4
+    fi
 fi
 
 # Pastikan MIN_DURATION dari /boot/splash.conf terpenuhi sebelum menutup splash
