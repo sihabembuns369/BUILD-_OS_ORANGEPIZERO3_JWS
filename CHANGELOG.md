@@ -1,5 +1,18 @@
 # CHANGELOG
 
+## [2026-11-11] Fix Boot Logo Plymouth: Syntax Script & Enable Sysinit Service
+- Apa yang diubah:
+  - Memperbaiki kesalahan sintaks parser Plymouth pada `jws-animated.script.template`, `jws-animated.script`, dan `splash-apply`: mengganti semua komentar gaya C (`//`) menjadi komentar standar Plymouth (`#`). Plymouth script parser menganggap `//` sebagai operator pembagian ganda yang memicu syntax error dan membatalkan inisialisasi tema.
+  - Mengaktifkan unit layanan `plymouth-start.service` seawal mungkin pada fase booting systemd dengan menautkannya ke `sysinit.target.wants/` tepat setelah inisialisasi device udev. Hal ini menyelesaikan masalah boot logo tidak muncul pada sistem yang mem-boot kernel langsung tanpa initramfs.
+  - Memasukkan user `jws` ke dalam grup `tty` pada `/etc/group` untuk menjamin izin akses penuh ke `/dev/tty1` saat peluncuran KMS/DRM.
+  - Menambahkan callback `quit_callback` dengan `SetQuitFunction` untuk menjamin proses keluar Plymouth yang bersih saat aplikasi JWS mengambil alih DRM master.
+  - Merakit ulang berkas disk image `output/orangepi_zero3_jws.img` (3.0 GB).
+- Alasan: Mengatasi boot logo yang tidak muncul di jendela display QEMU / layar HDMI saat sistem mulai booting.
+- File/komponen terdampak: `overlay/etc/systemd/system/plymouth-start.service`, `overlay/etc/systemd/system/sysinit.target.wants/plymouth-start.service`, `overlay/usr/share/plymouth/themes/jws-animated/jws-animated.script*`, `overlay/usr/local/bin/splash-apply`, `overlay/etc/group`, `output/orangepi_zero3_jws.img`, `CHANGELOG.md`.
+- Hasil uji: Layanan `plymouth-start.service` terverifikasi aktif langsung setelah `systemd-udev-trigger` pada fase `sysinit.target`, script diparsing sukses tanpa syntax error, dan boot logo tampil di layar display.
+- Commit / tag: `fix(splash): perbaiki parser sintaks plymouth script dan aktifkan di sysinit target`
+
+
 ## [2026-11-11] Pasang Alat Monitor Performa: top, htop, free, vmstat & jws-monitor
 - Apa yang diubah:
   - Memasang paket `top`, `htop`, `free`, `uptime`, `vmstat`, dan pustaka runtime `libproc2.so.0` ke dalam direktori `overlay/` dan rootfs sistem.

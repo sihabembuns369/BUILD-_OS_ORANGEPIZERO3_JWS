@@ -158,7 +158,7 @@ write_plymouth_script() {
     local tb="${13}"
 
     cat <<EOF > "${THEME_DIR}/jws-animated.script"
-// jws-animated.script - Dibuat otomatis oleh splash-apply
+# jws-animated.script - Dibuat otomatis oleh splash-apply
 mode = "${m}";
 bg_r = ${bgr};
 bg_g = ${bgg};

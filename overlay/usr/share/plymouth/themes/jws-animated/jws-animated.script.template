@@ -1,12 +1,12 @@
-// Background color
+# Background color
 Window.SetBackgroundTopColor(bg_r, bg_g, bg_b);
 Window.SetBackgroundBottomColor(bg_r, bg_g, bg_b);
 
-// Sprite utama container animasi & teks
+# Sprite utama container animasi & teks
 global.screen_sprite = Sprite();
 global.text_sprite = Sprite();
 
-// Ambil resolusi layar dinamis
+# Ambil resolusi layar dinamis
 screen_w = Window.GetWidth();
 screen_h = Window.GetHeight();
 if (!screen_w || screen_w <= 0) screen_w = 1280;
@@ -16,14 +16,14 @@ screen_y = Window.GetY();
 if (!screen_x) screen_x = 0;
 if (!screen_y) screen_y = 0;
 
-// Ukuran responsif: 35% dari tinggi layar (min 140px, max 300px)
+# Ukuran responsif: 35% dari tinggi layar (min 140px, max 300px)
 target_dim = Math.Int(screen_h * 0.35);
 if (target_dim > 300) target_dim = 300;
 if (target_dim < 140) target_dim = 140;
 
 global.anim_dim = target_dim;
 
-// Posisi terpusat responsif
+# Posisi terpusat responsif
 pos_x = screen_x + Math.Int((screen_w - target_dim) / 2);
 pos_y = screen_y + Math.Int((screen_h - target_dim) / 2) - 30;
 
@@ -77,7 +77,7 @@ if (mode == "image") {
     Plymouth.SetRefreshFunction(refresh_callback);
 
 } else {
-    // Mode Animation / Frames / GIF
+    # Mode Animation / Frames / GIF
     for (i = 0; i < frame_count; i++) {
         num = i + 1;
         idx_str = "";
@@ -136,7 +136,7 @@ if (mode == "image") {
     Plymouth.SetRefreshFunction(refresh_callback);
 }
 
-// Render teks konfigurasi jika diset
+# Render teks konfigurasi jika diset
 if (text_msg != "") {
     text_image = Image.Text(text_msg, text_r, text_g, text_b, 1, "Sans 16");
     if (text_image) {
@@ -151,7 +151,7 @@ if (text_msg != "") {
     }
 }
 
-// Redam 100% status dan pesan internal systemd agar layar HDMI murni grafis
+# Redam 100% status dan pesan internal systemd agar layar HDMI murni grafis
 fun dummy_status_callback (status) {
 }
 Plymouth.SetUpdateStatusFunction(dummy_status_callback);
@@ -159,3 +159,8 @@ Plymouth.SetUpdateStatusFunction(dummy_status_callback);
 fun dummy_message_callback (text) {
 }
 Plymouth.SetDisplayMessageFunction(dummy_message_callback);
+
+fun quit_callback () {
+    global.screen_sprite.SetOpacity(0);
+}
+Plymouth.SetQuitFunction(quit_callback);

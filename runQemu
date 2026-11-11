@@ -29,8 +29,7 @@ RES_Y="${RES_Y:-720}"
 DISPLAY_OPTS=""
 AUDIO_OPTS=""
 if [ -n "$DISPLAY" ]; then
-    # Menggunakan akselerasi 3D VirGL GPU untuk performa 60 FPS mulus
-    DISPLAY_OPTS="-device virtio-gpu-gl-pci,xres=${RES_X},yres=${RES_Y} -display gtk,gl=on,zoom-to-fit=on"
+    DISPLAY_OPTS="-device virtio-gpu-pci,xres=${RES_X},yres=${RES_Y} -display gtk,zoom-to-fit=on"
     AUDIO_OPTS="-audiodev pa,id=snd0 -device intel-hda -device hda-duplex,audiodev=snd0"
 else
     echo "Peringatan: Variabel DISPLAY tidak diset. Menjalankan dalam mode headless (-display none)."
@@ -40,7 +39,7 @@ fi
 
 KERNEL_OPTS=""
 if [ -f "$KERNEL_IMG" ]; then
-    KERNEL_OPTS="-kernel ${KERNEL_IMG} -append \"root=/dev/vda2 rw rootwait console=tty1 console=ttyAMA0,115200 video=${RES_X}x${RES_Y}@60 quiet splash loglevel=3 plymouth.ignore-serial-consoles vt.global_cursor_default=0\""
+    KERNEL_OPTS="-kernel ${KERNEL_IMG} -append \"root=/dev/vda2 rw rootwait console=tty1 console=ttyAMA0,115200 quiet splash loglevel=3 plymouth.ignore-serial-consoles vt.global_cursor_default=0\""
 fi
 
 SSH_PORT="${SSH_PORT:-22220}"
