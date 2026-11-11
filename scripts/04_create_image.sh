@@ -44,7 +44,7 @@ cat <<EOF > "${STAGING_BOOT}/extlinux/extlinux.conf"
 LABEL OrangePi_Zero3_JWS
     LINUX /Image
     FDT /sun50i-h618-orangepi-zero3.dtb
-    APPEND root=/dev/mmcblk0p2 rootwait rw console=tty1 console=ttyS0,115200 splash systemd.show_status=1 loglevel=7 plymouth.ignore-serial-consoles vt.global_cursor_default=0
+    APPEND root=/dev/mmcblk0p2 rootwait rw console=tty1 console=ttyS0,115200 quiet splash loglevel=3 plymouth.ignore-serial-consoles vt.global_cursor_default=0
 EOF
 
 echo "==> Membuat partisi BOOT (FAT32) dengan mformat & mcopy..."

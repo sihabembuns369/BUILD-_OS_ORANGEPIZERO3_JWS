@@ -1,5 +1,23 @@
 # CHANGELOG
 
+## [2026-11-11] Instalasi Paket Runtime Plymouth/SDL2/FFmpeg, Pembersihan Duplikat DRM, dan Pemisahan Dual Output HDMI vs UART
+- Apa yang diubah:
+  - Menginstal paket-paket runtime esensial yang sebelumnya absen di rootfs Debian: `plymouth`, `plymouth-themes` (menyediakan mesin `script.so` untuk animasi frame), `libsdl2-2.0-0`, `libsdl2-image-2.0-0`, `libsdl2-ttf-2.0-0`, `ffmpeg`, dan `alsa-utils`.
+  - Mengonfigurasi `/etc/plymouth/plymouthd.conf` dengan `Theme=jws-animated` dan symlink `default.plymouth`.
+  - Membersihkan modul DRM duplikat dari `/lib/modules/6.6.162/kernel/drivers/gpu/drm` (`drm.ko`, `drm_kms_helper.ko`, `drm_shmem_helper.ko`, dll) karena DRM telah dikompilasi built-in (`=y`) di kernel Image, menyelesaikan peringatan `duplicate symbol ___drm_dbg (owned by kernel)`.
+  - Memperbaiki pemisahan output dual-console sesuai arahan:
+    - **HDMI / LCD**: Dikhususkan 100% untuk grafis animasi/gambar splash Plymouth tanpa bocoran teks boot kernel maupun systemd (`quiet splash loglevel=3 plymouth.ignore-serial-consoles vt.global_cursor_default=0`).
+    - **UART / Serial Console**: Menampilkan seluruh log proses booting kernel dan status unit systemd secara real-time (`overlay/etc/systemd/system.conf.d/10-show-status.conf`), diakhiri dengan prompt autologin interaktif user `jws`.
+  - Memperbaiki ordering dependency pada `splash-apply.service` dengan menghapus `RequiresMountsFor=/boot` dan `After=local-fs.target` yang sempat memicu circular dependency abort pada `sysinit.target`.
+- Alasan: Paket Plymouth dan SDL2 belum terpasang di rootfs base image sehingga Plymouth daemon tidak dapat mengeksekusi tema grafis, modul DRM ganda menyebabkan peringatan kernel, dan teks boot sempat bocor ke layar HDMI karena `systemd.show_status=1` di cmdline.
+- File/komponen terdampak: `overlay/etc/systemd/system.conf.d/10-show-status.conf`, `overlay/etc/systemd/system/splash-apply.service`, `overlay/usr/local/bin/splash-apply`, `runQemu`, `scripts/04_create_image.sh`, `CHANGELOG.md`.
+- Hasil uji (QEMU / board fisik):
+  - Layar HDMI / display GUI virtual QEMU bersih dari teks log booting dan menampilkan animasi Plymouth splash `jws-animated`.
+  - Konsol UART serial (`ttyAMA0` di QEMU / `ttyS0` di board fisik) menampilkan seluruh detail boot kernel dan `[ OK ]` systemd unit status secara lengkap dan real-time.
+  - Autologin ke `jws@jws-pi:~$` di terminal UART berjalan mulus.
+  - Peringatan duplikat simbol DRM telah bersih sepenuhnya.
+- Commit / tag: `fix(boot): pisahkan output uart informatif dan hdmi grafis animasi splash`
+
 ## [2026-11-11] Fix Evaluasi Skrip Plymouth Script Theme, Mounting Partisi Boot, dan Pemulihan Log UART Realtime
 - Apa yang diubah:
   - Memperbaiki parser tema Plymouth `overlay/usr/share/plymouth/themes/jws-animated/jws-animated.script`: Plymouth script engine tidak mendukung `#include`, sehingga baris `#include "theme-vars.script"` sebelumnya diabaikan sebagai komentar dan seluruh variabel tema bernilai null (layar grafis tidak menggambar apa pun). Variabel konfigurasi kini di-generate langsung di header skrip utama Plymouth menggunakan `jws-animated.script.template`.

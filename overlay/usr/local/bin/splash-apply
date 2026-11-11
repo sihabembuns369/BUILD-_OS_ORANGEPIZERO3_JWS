@@ -308,3 +308,4 @@ fi
 
 echo "$CURRENT_HASH" > "$HASH_FILE"
 log "Pembaruan splash selesai."
+exit 0

@@ -1,8 +1,6 @@
 [Unit]
 Description=Terapkan Konfigurasi Splash Screen Plymouth
 DefaultDependencies=no
-RequiresMountsFor=/boot
-After=local-fs.target
 Before=plymouth-start.service sysinit.target
 
 [Service]
