@@ -1,5 +1,18 @@
 # CHANGELOG
 
+## [2026-11-11] Fitur Tombol Restart & Shutdown Serta Perbaikan Navigasi Keyboard Menu JWS
+- Apa yang diubah:
+  - Menambahkan fitur **🔄 Restart Sistem** dan **⏻ Matikan Daya (Shutdown)** beserta dialog konfirmasi aman di aplikasi Jadwal Salat (`UIWidgets.hpp`, `UIWidgets.cpp`, `TVSidebar.cpp`, `SettingsModal.cpp`, `jadwalsholat_imgui.cpp`). Tombol tersedia langsung di bagian bawah **Sidebar TV** (`Enter` / `F1` / `M`), di panel navigasi kiri **SettingsModal**, dan di footer bawah **SettingsModal**.
+  - Memperbaiki bug navigasi keyboard pada `SettingsModal.cpp`: mengubah ID tombol tab dari `##Nav%d` menjadi `###Nav%d` agar perubahan simbol aktif `▶` tidak mereset `ImGuiID` (`g.NavId`) saat berpindah tab dengan tombol panah `▲`/`▼`.
+  - Memperbaiki `TVSidebar.cpp` dan `VirtualKeyboard.cpp`: mengganti `BeginTabBar` di Sidebar dengan tombol tab yang dapat difokuskan via panah/`1`/`2`/`3`/`PageUp`/`PageDown`, serta mengganti `InputText` read-only di `TVInputText` dengan tombol bergaya input agar fokus panah keyboard tidak terjebak di dalam kotak teks.
+  - Memperbaiki `jadwalsholat_imgui.cpp` agar tombol `ESC` di dalam konten tab pengaturan kembali ke daftar tab kiri terlebih dahulu (bukan langsung menutup seluruh jendela), serta mendukung pintasan `Enter`/`Space`/`M`/`P`/`F1` untuk Sidebar dan `S`/`F2` untuk Pengaturan Lengkap.
+  - Memperbarui `overlay/opt/jws/jws` agar menjalankan `udevadm trigger` pada subsistem `input`, mengatur izin `/dev/input/event*` & `/dev/tty1`, dan melampirkan `/dev/tty1` ke stdin `jadwalsholat_imgui` sehingga input keyboard di QEMU (`virtio-keyboard-pci`) selalu terdeteksi oleh SDL2 `evdev` sejak awal boot.
+  - Mengkompilasi ulang `jadwalsholat_imgui` (ARM64) dan merakit ulang `output/orangepi_zero3_jws.img` (3.0 GB).
+- Alasan: Menambahkan tombol kontrol daya (Restart & Shutdown) di UI aplikasi dan memperbaiki masalah tombol keyboard yang tidak merespons saat memilih menu/tab di QEMU.
+- File/komponen terdampak: `overlay/opt/jws/jadwalsholat_imgui`, `overlay/opt/jws/jws`, `output/orangepi_zero3_jws.img`, `CHANGELOG.md`.
+- Hasil uji (QEMU): Input keyboard berfungsi penuh untuk membuka Sidebar (`Enter`/`F1`), berpindah tab (`1`/`2`/`3` atau panah), membuka Pengaturan Lengkap (`Enter`/`F2`), memilih seluruh tab vertikal dengan panah `▲`/`▼`, masuk ke isi tab (`Enter`/`►`), kembali (`ESC`), serta membuka dialog konfirmasi Restart dan Shutdown.
+- Commit / tag: `feat(jws): tambah tombol restart shutdown dan perbaiki navigasi keyboard menu`
+
 ## [2026-11-11] Fix Boot Logo di Mode VirGL 3D dengan Backend Display SDL (`-display sdl,gl=on`)
 - Apa yang diubah:
   - Mengganti backend display di `runQemu` dari `-display gtk,gl=on,zoom-to-fit=off` menjadi `-display sdl,gl=on` bersama `-device virtio-gpu-gl-pci,xres=${RES_X},yres=${RES_Y}`.

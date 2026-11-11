@@ -58,5 +58,17 @@ if [ -e /run/plymouth/pid ]; then
     sudo /usr/bin/plymouth quit --retain-splash 2>/dev/null || /usr/bin/plymouth quit --retain-splash 2>/dev/null || true
 fi
 
+# Pastikan perangkat input (keyboard/mouse/IR/remot) sudah di-tag udev (ID_INPUT_KEYBOARD=1)
+# dan dapat diakses penuh oleh SDL2 evdev meskipun jws.service mulai di awal boot
+sudo /bin/udevadm trigger --type=subsystems --subsystem-match=input 2>/dev/null || true
+sudo /bin/udevadm trigger --type=devices --subsystem-match=input --action=add 2>/dev/null || true
+sudo /bin/udevadm settle --timeout=2 2>/dev/null || true
+sudo /bin/chmod 666 /dev/input/event* /dev/input/mice /dev/input/mouse* /dev/tty1 /dev/tty0 2>/dev/null || true
+sudo /usr/bin/chvt 1 2>/dev/null || true
+
 echo "[JWS] Meluncurkan aplikasi jadwal salat ImGui..."
-exec "$APP_DIR/jadwalsholat_imgui" "$@"
+if [ -r /dev/tty1 ]; then
+    exec "$APP_DIR/jadwalsholat_imgui" "$@" </dev/tty1
+else
+    exec "$APP_DIR/jadwalsholat_imgui" "$@"
+fi
