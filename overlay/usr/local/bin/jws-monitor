@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+# /usr/local/bin/jws-monitor
+# Monitor performa CPU, RAM, dan status aplikasi JWS
+
+clear
+echo "=========================================================="
+echo "   ORANGE PI ZERO 3 - JWS SYSTEM & PERFORMANCE MONITOR    "
+echo "=========================================================="
+echo ""
+uptime
+echo ""
+free -h
+echo ""
+echo "--- Status Service JWS ---"
+systemctl status jws.service --no-pager -n 5
+echo ""
+echo "--- Top 5 Proses Pemakan CPU/RAM ---"
+ps -eo pid,ppid,cmd,%mem,%cpu --sort=-%cpu | head -n 7
+echo "=========================================================="
+echo "Menjalankan htop... Tekan 'q' atau Ctrl+C untuk keluar."
+echo "=========================================================="
+sleep 2
+exec htop

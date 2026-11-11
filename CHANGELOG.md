@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## [2026-11-11] Pasang Alat Monitor Performa: top, htop, free, vmstat & jws-monitor
+- Apa yang diubah:
+  - Memasang paket `top`, `htop`, `free`, `uptime`, `vmstat`, dan pustaka runtime `libproc2.so.0` ke dalam direktori `overlay/` dan rootfs sistem.
+  - Membuat script pemantau utilitas praktis `/usr/local/bin/jws-monitor` yang menampilkan ringkasan penggunaan memori, load CPU, status unit `jws.service`, 5 proses pemakan CPU teratas, dan meluncurkan antarmuka interaktif `htop`.
+  - Merakit ulang berkas disk image `output/orangepi_zero3_jws.img` (3.0 GB).
+- Alasan: Permintaan pengguna untuk menambahkan alat pemantau `top` guna menganalisis dan mendiagnosis penggunaan CPU dan RAM aplikasi.
+- File/komponen terdampak: `overlay/usr/bin/*`, `overlay/lib/aarch64-linux-gnu/libproc2*`, `overlay/usr/local/bin/jws-monitor`, `output/orangepi_zero3_jws.img`, `CHANGELOG.md`.
+- Hasil uji: Perintah `top`, `htop`, dan `jws-monitor` terpasang siap pakai di terminal UART serial maupun remote SSH.
+- Commit / tag: `feat(tools): pasang top htop free dan script jws-monitor untuk diagnosis performa`
+
 ## [2026-11-11] Akselerasi GPU VirGL 3D, Hapus Software Renderer & Sinkronisasi UART Terminal
 - Apa yang diubah:
   - Mengaktifkan akselerasi perangkat keras 3D GPU VirGL (`virtio-gpu-gl-pci` + `gtk,gl=on`) pada skrip `runQemu` untuk mengalirkan rendering langsung ke GPU PC host, mengatasi performa aplikasi yang lemot.
