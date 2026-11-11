@@ -10,9 +10,19 @@ elif [ -x "/usr/local/bin/jws-bin" ]; then
     plymouth quit --retain-splash 2>/dev/null || true
     exec /usr/local/bin/jws-bin "$@"
 else
-    # Jika aplikasi belum dipasang di /opt/jws/jws, splash animasi tetap berputar terus
-    echo "Aplikasi JWS standby. Menunggu binary jadwal salat di /opt/jws/jws..."
+    # Tampilkan splash screen selama beberapa detik agar animasi boot selesai berputar
+    sleep 4
+    # Tutup splash screen agar tidak menggantung tanpa batas waktu jika biner belum dipasang
+    plymouth quit 2>/dev/null || true
+    
+    echo "=========================================================="
+    echo " JWS KIOSK STANDBY"
+    echo " Sistem siap. Menunggu binary aplikasi di: /opt/jws/jws"
+    echo "=========================================================="
     while true; do
-        sleep 60
+        if [ -x "/opt/jws/jws" ]; then
+            exec /opt/jws/jws "$@"
+        fi
+        sleep 5
     done
 fi
