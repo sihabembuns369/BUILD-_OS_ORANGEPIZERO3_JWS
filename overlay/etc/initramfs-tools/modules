@@ -1,0 +1,6 @@
+# Modul DRM/KMS agar display aktif seawal mungkin di initramfs
+drm
+virtio_gpu
+sun4i_drm
+sun8i_mixer
+sun8i_dw_hdmi

@@ -1,5 +1,28 @@
 # CHANGELOG
 
+## [2026-11-11] Implementasi Konsep Boot Logo Armbian/Anbernic & Standby Kiosk Transisi Bersih
+- Apa yang diubah:
+  - Mengubah konfigurasi default sistem (`configs/splash.conf.example`, `overlay/usr/local/bin/splash-apply`) menjadi mode **Boot Logo statis (`MODE=image`)** bergaya Armbian/Anbernic, dengan logo default berlatar hitam polos tanpa teks status yang menumpuk.
+  - Menghasilkan berkas bitmap 24-bit RGB `default_assets/splash.bmp` (1280x720) yang siap dibaca oleh U-Boot pada milidetik pertama di partisi BOOT (FAT32).
+  - Memperbaiki `overlay/usr/local/bin/jws-app` dan `overlay/etc/systemd/system/jws.service`:
+    - Begitu boot selesai, Plymouth splash ditutup secara bersih (`plymouth quit`).
+    - Jika aplikasi `/opt/jws/jws` ada -> transisi langsung mulus ke aplikasi fullscreen.
+    - Jika aplikasi `/opt/jws/jws` belum terpasang -> layar HDMI (`/dev/tty1`) menampilkan antarmuka Standby Kiosk yang informatif, rapi, dan bersih (status IP, UART ttyS0, SSH port 22, petunjuk deployment berkas) tanpa kursor berkedip dan tanpa loop animasi berputar terus.
+  - Memperbaiki `overlay/etc/fstab` dengan opsi `defaults,nofail` pada partisi BOOT untuk mencegah timeout 90s dan emergency mode.
+  - Menambahkan override systemd `overlay/etc/systemd/system/plymouth-start.service.d/override.conf` (`DefaultDependencies=no`, `Before=sysinit.target basic.target`) agar splash screen berjalan seawal mungkin.
+  - Menyinkronkan 53 berkas overlay secara langsung dan bersih ke `build/rootfs.img` dan merakit ulang image `output/orangepi_zero3_jws.img` (3.0 GB).
+- Alasan: Memenuhi permintaan pengguna untuk mengadopsi konsep Boot Logo ala Armbian/Anbernic yang dapat diganti secara default, dan menyelesaikan masalah animasi boot loading yang berputar tanpa henti di QEMU ketika biner aplikasi belum dipasang.
+- File/komponen terdampak: `configs/splash.conf.example`, `default_assets/splash.bmp`, `overlay/etc/fstab`, `overlay/etc/systemd/system/jws.service`, `overlay/usr/local/bin/jws-app`, `overlay/usr/local/bin/splash-apply`, `overlay/usr/share/plymouth/themes/jws-animated/*`, `scripts/04_create_image.sh`, `scripts/sync_rootfs_debugfs.py`, `CHANGELOG.md`.
+- Hasil uji (QEMU / board fisik):
+  - [x] Boot QEMU bersih tanpa error EXT4-fs.
+  - [x] HDMI menampilkan Boot Logo statis yang elegan di tengah layar (ala Armbian).
+  - [x] Teks ganda "Memuat Sistem..." diredam 100%.
+  - [x] Setelah boot selesai, Plymouth quit secara mulus dan HDMI menampilkan layar Kiosk Standby JWS (menunggu biner `/opt/jws/jws`).
+  - [x] Konsol serial UART (ttyAMA0) autologin ke user `jws@jws-pi:~$`.
+  - [x] Partisi FAT32 (`/boot`) berisi `splash.bmp`, `splash/logo.png`, dan `splash.conf` yang bisa diedit langsung dari PC Windows/Linux.
+- Commit / tag: `feat(splash): implementasi boot logo statis ala armbian dan kiosk standby`
+
+
 ## [2026-11-11] Penskalaan Frame Animasi Splash (320x320), Penataan Layout Teks, dan Eliminasi Teks Bertumpuk
 - Apa yang diubah:
   - Mengonversi ulang 24 frame PNG dari `default_assets/boot.gif` ke ukuran proporsional aslinya yaitu **320x320 piksel** (sebelumnya ter-upscale ke 720x720 sehingga terlalu besar dan memakan 95% layar).

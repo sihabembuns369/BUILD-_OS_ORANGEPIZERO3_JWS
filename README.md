@@ -63,25 +63,18 @@ Untuk menguji booting, konsol serial, SSH server, autostart aplikasi JWS, dan te
 
 ---
 
-## Cara Mengganti Splash Screen
+## Cara Mengganti Splash Screen & Boot Logo (Armbian / Anbernic style)
 
-Anda dapat mengganti logo, frame animasi, atau file GIF hanya dengan mengedit file di partisi FAT `/boot/` (dapat dicabut dan dicolok langsung ke PC Windows/Mac/Linux):
+Sistem menggunakan konsep **Boot Logo statis bersih ala Armbian** secara default, dan mendukung U-Boot native splash bitmap serta animasi:
 
-1. **Buka file** `/boot/splash.conf`.
-2. **Pilih Mode Tampilan**:
-   - **Mode Gambar Statis**:
-     ```ini
-     MODE=image
-     IMAGE=/boot/splash/logo.png
-     ```
-   - **Mode Urutan Frame PNG**:
-     ```ini
-     MODE=frames
-     FRAMES_DIR=/boot/splash/frames
-     FPS=15
-     LOOP=yes
-     ```
-   - **Mode GIF Animasi**:
+1. **Boot Logo Statis (Default ala Armbian)**:
+   - Cukup ganti file gambar di `/boot/splash/logo.png` (bisa PNG atau JPG).
+   - Layar HDMI akan menampilkan logo tenang di tengah latar hitam bersih tanpa teks.
+2. **U-Boot Splash Screen Paling Awal (`splash.bmp`)**:
+   - Letakkan file bitmap 24-bit BMP di `/boot/splash.bmp` (resolusi disarankan 1280x720).
+   - Tampil seketika dari U-Boot saat board pertama kali dinyalakan.
+3. **Mode Animasi (Frames / GIF)**:
+   - Anda dapat mengaktifkan animasi kembali kapan saja melalui `/boot/splash.conf`:
      ```ini
      MODE=gif
      GIF=/boot/splash/boot.gif

@@ -28,6 +28,7 @@ mkdir -p "${STAGING_BOOT}/splash/frames" "${STAGING_BOOT}/extlinux"
 [ -f "${OUTPUT_DIR}/sun50i-h618-orangepi-zero3.dtb" ] && cp -v "${OUTPUT_DIR}/sun50i-h618-orangepi-zero3.dtb" "${STAGING_BOOT}/"
 
 # Salin aset splash default & frames pra-konversi
+[ -f "${ROOT_DIR}/default_assets/splash.bmp" ] && cp -v "${ROOT_DIR}/default_assets/splash.bmp" "${STAGING_BOOT}/splash.bmp"
 cp -v "${ROOT_DIR}/default_assets/logo.png" "${STAGING_BOOT}/splash/"
 cp -v "${ROOT_DIR}/default_assets/boot.gif" "${STAGING_BOOT}/splash/"
 cp -v "${ROOT_DIR}/overlay/usr/share/plymouth/themes/jws-animated"/frame_*.png "${STAGING_BOOT}/splash/frames/" 2>/dev/null || true

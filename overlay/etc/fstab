@@ -1,2 +1,2 @@
 # /etc/fstab: static file system information
-LABEL=BOOT      /boot    vfat    defaults,x-systemd.before=local-fs.target    0    2
+LABEL=BOOT      /boot    vfat    defaults,nofail    0    2

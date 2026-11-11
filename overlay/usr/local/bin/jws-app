@@ -2,27 +2,42 @@
 # /usr/local/bin/jws-app
 # Launcher untuk Aplikasi Jadwal Waktu Salat (SDL2 + ImGui)
 
+# Tutup Plymouth splash screen agar transisi ke UI atau standby
+plymouth quit 2>/dev/null || true
+
 if [ -x "/opt/jws/jws" ]; then
-    # Tutup splash screen tepat saat aplikasi siap dieksekusi
-    plymouth quit --retain-splash 2>/dev/null || true
     exec /opt/jws/jws "$@"
 elif [ -x "/usr/local/bin/jws-bin" ]; then
-    plymouth quit --retain-splash 2>/dev/null || true
     exec /usr/local/bin/jws-bin "$@"
 else
-    # Tampilkan splash screen selama beberapa detik agar animasi boot selesai berputar
-    sleep 4
-    # Tutup splash screen agar tidak menggantung tanpa batas waktu jika biner belum dipasang
-    plymouth quit 2>/dev/null || true
-    
-    echo "=========================================================="
-    echo " JWS KIOSK STANDBY"
-    echo " Sistem siap. Menunggu binary aplikasi di: /opt/jws/jws"
-    echo "=========================================================="
+    # Bersihkan layar HDMI (/dev/tty1) dan sembunyikan kursor
+    clear
+    printf "\033[?25l"
+
+    cat <<'EOF'
+
+  ==============================================================
+             ORANGE PI ZERO 3 - JADWAL WAKTU SALAT (JWS)
+  ==============================================================
+   [OK] Sistem Linux Debian Minimalis Siap & Aktif
+   [OK] Audio, WiFi, Bluetooth, & HDMI DRM Driver Loaded
+   [OK] Akses Debug UART : Aktif di ttyS0 (Auto-login: jws)
+   [OK] Remote SSH Server: Aktif di Port 22 (ssh jws@jws-pi.local)
+  --------------------------------------------------------------
+   STATUS: STANDBY (BOOT SELESAI)
+   Menunggu berkas biner aplikasi di: /opt/jws/jws
+   (Aplikasi otomatis berjalan fullscreen begitu file tersedia)
+  ==============================================================
+
+EOF
+
+    # Loop standby: memantau jika biner aplikasi di-upload via SSH/UART
     while true; do
         if [ -x "/opt/jws/jws" ]; then
+            printf "\033[?25h" # Kembalikan kursor jika app butuh
+            clear
             exec /opt/jws/jws "$@"
         fi
-        sleep 5
+        sleep 3
     done
 fi

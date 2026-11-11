@@ -1,14 +1,14 @@
 // jws-animated.script - Dibuat otomatis untuk Orange Pi Zero 3 JWS
-mode = "gif";
+mode = "image";
 bg_r = 0.000;
 bg_g = 0.000;
 bg_b = 0.000;
 scale_mode = "fit";
 position_mode = "center";
-frame_count = 24;
+frame_count = 1;
 target_fps = 15;
 loop_mode = 1;
-text_msg = "Memuat jadwal salat...";
+text_msg = "";
 text_r = 1.000;
 text_g = 1.000;
 text_b = 1.000;
@@ -17,149 +17,139 @@ text_b = 1.000;
 Window.SetBackgroundTopColor(bg_r, bg_g, bg_b);
 Window.SetBackgroundBottomColor(bg_r, bg_g, bg_b);
 
-// Sprite utama container animasi
+// Sprite utama container animasi & teks
 global.screen_sprite = Sprite();
+global.text_sprite = Sprite();
 
-global.current_frame = 1;
-global.frame_timer = 0;
-global.anim_dim = 320;
-global.anim_pos_y = 150;
+// Ambil resolusi layar dinamis
+screen_w = Window.GetWidth();
+screen_h = Window.GetHeight();
+if (!screen_w || screen_w <= 0) screen_w = 1280;
+if (!screen_h || screen_h <= 0) screen_h = 720;
+screen_x = Window.GetX();
+screen_y = Window.GetY();
+if (!screen_x) screen_x = 0;
+if (!screen_y) screen_y = 0;
+
+// Ukuran animasi responsif: 35% dari tinggi layar (min 140px, max 300px)
+target_dim = Math.Int(screen_h * 0.35);
+if (target_dim > 300) target_dim = 300;
+if (target_dim < 140) target_dim = 140;
+
+global.anim_dim = target_dim;
+
+// Posisi terpusat responsif
+pos_x = screen_x + Math.Int((screen_w - target_dim) / 2);
+pos_y = screen_y + Math.Int((screen_h - target_dim) / 2) - 30;
+
+if (position_mode == "top") {
+    pos_y = screen_y + Math.Int(screen_h * 0.12);
+} else if (position_mode == "bottom") {
+    pos_y = screen_y + Math.Int(screen_h * 0.75) - target_dim;
+}
+
+global.anim_pos_x = pos_x;
+global.anim_pos_y = pos_y;
+
+global.screen_sprite.SetPosition(pos_x, pos_y, 10);
+global.screen_sprite.SetOpacity(1);
 
 if (mode == "image") {
-    global.raw_img = Image("splash.png");
-    if (!global.raw_img) {
-        global.raw_img = Image("default_logo.png");
+    raw_img = Image("splash.png");
+    if (!raw_img) {
+        raw_img = Image("default_logo.png");
     }
 
-    if (global.raw_img) {
-        global.screen_sprite.SetImage(global.raw_img);
+    if (raw_img) {
+        // Skala responsif menjaga proporsi
+        iw = raw_img.GetWidth();
+        ih = raw_img.GetHeight();
+        if (iw > 0 && ih > 0) {
+            scale_ratio = target_dim / ih;
+            new_w = Math.Int(iw * scale_ratio);
+            new_h = Math.Int(ih * scale_ratio);
+            scaled_img = raw_img.Scale(new_w, new_h);
+            global.screen_sprite.SetImage(scaled_img);
+            global.screen_sprite.SetPosition(screen_x + Math.Int((screen_w - new_w) / 2), pos_y, 10);
+        } else {
+            global.screen_sprite.SetImage(raw_img);
+        }
         global.screen_sprite.SetOpacity(1);
     }
-
-    fun refresh_callback () {
-        w = Window.GetWidth();
-        h = Window.GetHeight();
-        if (!w || w <= 0) w = 1280;
-        if (!h || h <= 0) h = 720;
-        x = Window.GetX();
-        y = Window.GetY();
-        if (!x) x = 0;
-        if (!y) y = 0;
-
-        if (global.raw_img) {
-            iw = global.raw_img.GetWidth();
-            ih = global.raw_img.GetHeight();
-            pos_x = x + (w - iw) / 2;
-            pos_y = y + (h - ih) / 2 - 40;
-            if (position_mode == "top") {
-                pos_y = y + h * 0.15;
-            } else if (position_mode == "bottom") {
-                pos_y = y + h * 0.7 - ih;
-            }
-            global.anim_pos_y = pos_y;
-            global.anim_dim = ih;
-            global.screen_sprite.SetPosition(pos_x, pos_y, 10);
-            global.screen_sprite.SetOpacity(1);
-        }
-    }
-
-    refresh_callback();
-    Plymouth.SetRefreshFunction(refresh_callback);
 
 } else {
     // Mode Animation / Frames / GIF
-    // Muat seluruh frame langsung di global scope
-    for (i = 1; i <= frame_count; i++) {
+    // Muat dan resize seluruh frame ke ukuran responsif
+    for (i = 0; i < frame_count; i++) {
+        num = i + 1;
         idx_str = "";
-        if (i < 10) idx_str = "00" + i;
-        else if (i < 100) idx_str = "0" + i;
-        else idx_str = "" + i;
+        if (num < 10) idx_str = "00" + num;
+        else if (num < 100) idx_str = "0" + num;
+        else idx_str = "" + num;
 
-        global.frames[i] = Image("frame_" + idx_str + ".png");
+        raw_frame = Image("frame_" + idx_str + ".png");
+        if (raw_frame) {
+            global.frames[i] = raw_frame.Scale(target_dim, target_dim);
+        }
     }
 
-    if (global.frames[1]) {
-        global.screen_sprite.SetImage(global.frames[1]);
+    if (global.frames[0]) {
+        global.screen_sprite.SetImage(global.frames[0]);
         global.screen_sprite.SetOpacity(1);
     }
 
+    // Hitung kecepatan animasi berbasis tick 50Hz
+    // Contoh: 15 fps -> 50 / 15 ≈ 3 ticks per frame
+    if (target_fps <= 0) target_fps = 15;
+    divisor = Math.Int(50 / target_fps);
+    if (divisor < 1) divisor = 1;
+
+    global.progress = 0;
+
     fun refresh_callback () {
-        w = Window.GetWidth();
-        h = Window.GetHeight();
-        if (!w || w <= 0) w = 1280;
-        if (!h || h <= 0) h = 720;
-        x = Window.GetX();
-        y = Window.GetY();
-        if (!x) x = 0;
-        if (!y) y = 0;
-
-        // Hitung frame rate (refresh interval Plymouth = 50Hz)
-        ticks_per_frame = 50 / target_fps;
-        if (ticks_per_frame < 1) ticks_per_frame = 1;
-
-        global.frame_timer++;
-        if (global.frame_timer >= ticks_per_frame) {
-            global.frame_timer = 0;
-            global.current_frame++;
-            if (global.current_frame > frame_count) {
-                if (loop_mode == 1) {
-                    global.current_frame = 1;
-                } else {
-                    global.current_frame = frame_count;
+        if (frame_count > 0 && global.frames[0]) {
+            if (loop_mode == 1) {
+                frame_idx = Math.Int(global.progress / divisor) % frame_count;
+            } else {
+                frame_idx = Math.Int(global.progress / divisor);
+                if (frame_idx >= frame_count) {
+                    frame_idx = frame_count - 1;
                 }
             }
-            
-            frame_img = global.frames[global.current_frame];
-            if (frame_img) {
-                global.screen_sprite.SetImage(frame_img);
-                global.screen_sprite.SetOpacity(1);
+
+            cur_frame = global.frames[frame_idx];
+            if (cur_frame) {
+                global.screen_sprite.SetImage(cur_frame);
             }
-        }
 
-        // Penempatan posisi responsif di tengah
-        pos_x = x + (w - global.anim_dim) / 2;
-        pos_y = y + (h - global.anim_dim) / 2 - 40;
-        if (position_mode == "top") {
-            pos_y = y + h * 0.15;
-        } else if (position_mode == "bottom") {
-            pos_y = y + h * 0.7 - global.anim_dim;
+            global.progress++;
         }
-        global.anim_pos_y = pos_y;
-
-        global.screen_sprite.SetPosition(pos_x, pos_y, 10);
     }
 
-    refresh_callback();
     Plymouth.SetRefreshFunction(refresh_callback);
 }
 
-// Text rendering rapi tepat di bawah animasi
+// Render teks konfigurasi di bawah animasi
 if (text_msg != "") {
     text_image = Image.Text(text_msg, text_r, text_g, text_b, 1, "Sans 16");
     if (text_image) {
-        global.text_sprite = Sprite(text_image);
-        fun message_refresh() {
-            w = Window.GetWidth();
-            h = Window.GetHeight();
-            if (!w || w <= 0) w = 1280;
-            if (!h || h <= 0) h = 720;
-            x = Window.GetX();
-            y = Window.GetY();
-            if (!x) x = 0;
-            if (!y) y = 0;
-            tx = x + (w - text_image.GetWidth()) / 2;
-            ty = global.anim_pos_y + global.anim_dim + 20;
-            if (ty + text_image.GetHeight() > h) {
-                ty = h - text_image.GetHeight() - 15;
-            }
-            global.text_sprite.SetPosition(tx, ty, 20);
-            global.text_sprite.SetOpacity(1);
+        global.text_sprite.SetImage(text_image);
+        tx = screen_x + Math.Int((screen_w - text_image.GetWidth()) / 2);
+        ty = global.anim_pos_y + global.anim_dim + 25;
+        if (ty + text_image.GetHeight() > screen_h) {
+            ty = screen_h - text_image.GetHeight() - 15;
         }
-        message_refresh();
+        global.text_sprite.SetPosition(tx, ty, 20);
+        global.text_sprite.SetOpacity(1);
     }
 }
 
-// Abaikan status teks acak systemd agar tidak mengotori layar
+// Redam 100% status dan pesan internal systemd ("Memuat Sistem...", dll)
+// agar layar HDMI murni hanya grafis animasi dan teks bersih yang dikonfigurasi
+fun dummy_status_callback (status) {
+}
+Plymouth.SetUpdateStatusFunction(dummy_status_callback);
+
 fun dummy_message_callback (text) {
 }
 Plymouth.SetDisplayMessageFunction(dummy_message_callback);
