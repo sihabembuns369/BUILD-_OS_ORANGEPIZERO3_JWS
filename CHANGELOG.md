@@ -1,5 +1,21 @@
 # CHANGELOG
 
+## [2026-11-11] Penskalaan Frame Animasi Splash (320x320), Penataan Layout Teks, dan Eliminasi Teks Bertumpuk
+- Apa yang diubah:
+  - Mengonversi ulang 24 frame PNG dari `default_assets/boot.gif` ke ukuran proporsional aslinya yaitu **320x320 piksel** (sebelumnya ter-upscale ke 720x720 sehingga terlalu besar dan memakan 95% layar).
+  - Memperbaiki tata letak (layout) pada `overlay/usr/share/plymouth/themes/jws-animated/jws-animated.script` dan template-nya:
+    - Animasi bulan bintang diletakkan presisi di tengah layar (`center`) dengan sedikit offset vertikal ke atas (`-40px`) agar seimbang.
+    - Teks "Memuat jadwal salat..." diletakkan tepat di bawah lingkaran animasi (`anim_pos_y + anim_height + 20px`), menghilangkan tumpang tindih teks dengan grafis animasi.
+    - Menambahkan `SetDisplayMessageFunction` kosong untuk meredam teks status internal systemd ("Memuat Sistem...") agar layar HDMI murni hanya menampilkan animasi bersih dan teks konfigurasi.
+  - Memastikan seluruh blok partisi rootfs bersih (3.1 GB) tersinkronisasi 100% (`NO_EXT4_ERRORS`).
+- Alasan: Menyesuaikan ukuran animasi agar proporsional dengan layar, menghilangkan teks yang bertumpuk di atas animasi, dan memastikan filesystem ext4 konsisten.
+- File/komponen terdampak: `overlay/usr/share/plymouth/themes/jws-animated/`, `build/rootfs.img`, `output/orangepi_zero3_jws.img`, `CHANGELOG.md`.
+- Hasil uji (QEMU / board fisik):
+  - Animasi bulan bintang berputar mulus dengan ukuran proporsional 320x320 di tengah layar HDMI virtual QEMU.
+  - Teks "Memuat jadwal salat..." tampil bersih di bawah animasi tanpa ada teks "Memuat Sistem..." yang menumpuk.
+  - Kernel log bebas dari pesan error filesystem (`NO_EXT4_ERRORS`).
+- Commit / tag: `fix(splash): skala animasi 320x320 proporsional dan rapikan tata letak teks`
+
 ## [2026-11-11] Perbaikan Syntax Parser Plymouth Script, Eliminasi Abort splash-apply, Sudo Nopasswd, dan Timeout dev-ttyS0
 - Apa yang diubah:
   - Memperbaiki sintaks skrip tema Plymouth `overlay/usr/share/plymouth/themes/jws-animated/jws-animated.script` dan template-nya:

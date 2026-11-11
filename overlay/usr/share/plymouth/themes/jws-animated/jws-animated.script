@@ -17,8 +17,12 @@ text_b = 1.000;
 Window.SetBackgroundTopColor(bg_r, bg_g, bg_b);
 Window.SetBackgroundBottomColor(bg_r, bg_g, bg_b);
 
-// Sprite utama container
+// Sprite utama container animasi
 screen_sprite = Sprite();
+
+// Global layout variables
+anim_pos_y = 0;
+anim_height = 320;
 
 if (mode == "image") {
     raw_img = Image("splash.png");
@@ -45,12 +49,14 @@ if (mode == "image") {
             iw = raw_img.GetWidth();
             ih = raw_img.GetHeight();
             pos_x = x + (w - iw) / 2;
-            pos_y = y + (h - ih) / 2 - 30;
+            pos_y = y + (h - ih) / 2 - 40;
             if (position_mode == "top") {
                 pos_y = y + h * 0.15;
             } else if (position_mode == "bottom") {
                 pos_y = y + h * 0.7 - ih;
             }
+            anim_pos_y = pos_y;
+            anim_height = ih;
             screen_sprite.SetPosition(pos_x, pos_y, 10);
             screen_sprite.SetOpacity(1);
         }
@@ -113,12 +119,14 @@ if (mode == "image") {
             iw = img.GetWidth();
             ih = img.GetHeight();
             pos_x = x + (w - iw) / 2;
-            pos_y = y + (h - ih) / 2 - 30;
+            pos_y = y + (h - ih) / 2 - 40;
             if (position_mode == "top") {
                 pos_y = y + h * 0.15;
             } else if (position_mode == "bottom") {
                 pos_y = y + h * 0.7 - ih;
             }
+            anim_pos_y = pos_y;
+            anim_height = ih;
             screen_sprite.SetImage(img);
             screen_sprite.SetPosition(pos_x, pos_y, 10);
             screen_sprite.SetOpacity(1);
@@ -129,7 +137,7 @@ if (mode == "image") {
     Plymouth.SetRefreshFunction(refresh_callback);
 }
 
-// Text rendering
+// Text rendering rapi tepat di bawah animasi
 if (text_msg != "") {
     text_image = Image.Text(text_msg, text_r, text_g, text_b, 1, "Sans 16");
     if (text_image) {
@@ -144,10 +152,18 @@ if (text_msg != "") {
             if (!x) x = 0;
             if (!y) y = 0;
             tx = x + (w - text_image.GetWidth()) / 2;
-            ty = y + h * 0.85;
+            ty = anim_pos_y + anim_height + 20;
+            if (ty + text_image.GetHeight() > h) {
+                ty = h - text_image.GetHeight() - 20;
+            }
             text_sprite.SetPosition(tx, ty, 20);
             text_sprite.SetOpacity(1);
         }
         message_refresh();
     }
 }
+
+// Abaikan status teks acak systemd agar tidak mengotori layar
+fun dummy_message_callback (text) {
+}
+Plymouth.SetDisplayMessageFunction(dummy_message_callback);
