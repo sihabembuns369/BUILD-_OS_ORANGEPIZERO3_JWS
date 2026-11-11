@@ -1,5 +1,16 @@
 # CHANGELOG
 
+## [2026-11-11] Konfigurasi Tampilan QEMU Landscape Widescreen (1280x720 / 16:9)
+- Apa yang diubah:
+  - Mengonfigurasi `runQemu` dengan mode tampilan landscape widescreen 16:9 (`xres=1280,yres=720`).
+  - Menambahkan opsi `zoom-to-fit=on` pada antarmuka `-display gtk` agar jendela QEMU otomatis menyesuaikan rasio aspek landscape secara responsif.
+  - Menambahkan parameter kernel `video=1280x720@60` ke command line kernel di `runQemu` agar framebuffer KMS/DRM dan Plymouth mengadopsi resolusi landscape sejak awal boot.
+  - Menyediakan variabel lingkungan `RES_X` dan `RES_Y` (contoh: `RES_X=1920 RES_Y=1080 ./runQemu`) agar pengguna dapat mengganti resolusi landscape dengan fleksibel.
+- Alasan: Permintaan pengguna untuk membuat tampilan display di QEMU berbentuk landscape.
+- File/komponen terdampak: `runQemu`, `CHANGELOG.md`.
+- Hasil uji: Perintah `runQemu` terverifikasi valid dan menjalankan jendela GTK landscape widescreen 1280x720 dengan fitur zoom-to-fit.
+- Commit / tag: `feat(qemu): ubah resolusi display qemu menjadi landscape 16:9 (1280x720)`
+
 ## [2026-11-11] Fix SDL2 EGL Not Initialized & ALSA Audio Device
 - Apa yang diubah:
   - Memasang pustaka Mesa EGL & GLESv2 (`libEGL.so.1`, `libEGL_mesa.so.0`, `libGLESv2.so.2`) dan konfigurasi vendor ICD GLVND (`/usr/share/glvnd/egl_vendor.d/50_mesa.json`) ke rootfs dan overlay.
