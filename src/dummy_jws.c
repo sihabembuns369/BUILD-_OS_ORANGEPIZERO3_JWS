@@ -7,7 +7,6 @@
 #define SCREEN_WIDTH 1280
 #define SCREEN_HEIGHT 720
 
-// Struktur kotak waktu salat
 typedef struct {
     const char *name;
     const char *time_str;
@@ -18,58 +17,76 @@ PrayerCard prayers[] = {
     {"SUBUH",   "04:15", 30, 41, 59},
     {"TERBIT",  "05:35", 30, 41, 59},
     {"DZUHUR",  "11:45", 30, 41, 59},
-    {"ASHAR",   "15:05", 16, 185, 129}, // Aktif (Hijau Zamrud)
+    {"ASHAR",   "15:05", 16, 185, 129}, // Aktif
     {"MAGHRIB", "17:55", 30, 41, 59},
     {"ISYA",    "19:08", 30, 41, 59}
 };
 
-// Fungsi menggambar persegi panjang terisi
 void draw_card(SDL_Renderer *renderer, int x, int y, int w, int h, int r, int g, int b) {
     SDL_Rect rect = {x, y, w, h};
     SDL_SetRenderDrawColor(renderer, r, g, b, 255);
     SDL_RenderFillRect(renderer, &rect);
 
-    // Border aksen emas
-    SDL_SetRenderDrawColor(renderer, 245, 158, 11, 200);
+    SDL_SetRenderDrawColor(renderer, 245, 158, 11, 220); // Border Emas
     SDL_RenderDrawRect(renderer, &rect);
 }
 
 int main(int argc, char *argv[]) {
-    printf("[JWS] Memulai aplikasi Jadwal Waktu Salat Kiosk (SDL2)...\n");
+    printf("[JWS] Memulai aplikasi Jadwal Waktu Salat Kiosk...\n");
+
+    // Hint agar kompatibel di QEMU virtio-gpu dan Orange Pi DRM KMS
+    SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
+    SDL_SetHint(SDL_HINT_FRAMEBUFFER_ACCELERATION, "0");
 
     if (SDL_Init(SDL_INIT_VIDEO) != 0) {
-        fprintf(stderr, "[JWS] SDL_Init Error: %s\n", SDL_GetError());
-        return 1;
+        // Fallback jika video driver default gagal
+        setenv("SDL_VIDEODRIVER", "dummy", 0);
+        if (SDL_Init(SDL_INIT_VIDEO) != 0) {
+            fprintf(stderr, "[JWS] Gagal inisialisasi SDL: %s\n", SDL_GetError());
+            return 1;
+        }
     }
 
     SDL_Window *window = SDL_CreateWindow(
-        "Orange Pi Zero 3 - Jadwal Waktu Salat (JWS)",
+        "Orange Pi Zero 3 - Jadwal Waktu Salat",
         SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
         SCREEN_WIDTH, SCREEN_HEIGHT,
-        SDL_WINDOW_FULLSCREEN | SDL_WINDOW_SHOWN
+        SDL_WINDOW_SHOWN | SDL_WINDOW_FULLSCREEN_DESKTOP
     );
 
     if (!window) {
-        fprintf(stderr, "[JWS] SDL_CreateWindow Error: %s\n", SDL_GetError());
+        // Coba mode window biasa jika fullscreen desktop gagal
+        window = SDL_CreateWindow(
+            "Orange Pi Zero 3 - Jadwal Waktu Salat",
+            0, 0, SCREEN_WIDTH, SCREEN_HEIGHT,
+            SDL_WINDOW_SHOWN
+        );
+    }
+
+    if (!window) {
+        fprintf(stderr, "[JWS] Gagal membuat window: %s\n", SDL_GetError());
         SDL_Quit();
         return 1;
     }
 
-    SDL_Renderer *renderer = SDL_CreateRenderer(
-        window, -1,
-        SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC
-    );
-
+    SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_SOFTWARE);
     if (!renderer) {
-        renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_SOFTWARE);
+        renderer = SDL_CreateRenderer(window, -1, 0);
     }
 
-    // Gambar frame pertama sebelum menutup Plymouth
-    SDL_SetRenderDrawColor(renderer, 15, 23, 42, 255); // Background Dark Navy
+    if (!renderer) {
+        fprintf(stderr, "[JWS] Gagal membuat renderer: %s\n", SDL_GetError());
+        SDL_DestroyWindow(window);
+        SDL_Quit();
+        return 1;
+    }
+
+    // Render frame awal sebelum menutup Plymouth
+    SDL_SetRenderDrawColor(renderer, 15, 23, 42, 255);
     SDL_RenderClear(renderer);
     SDL_RenderPresent(renderer);
 
-    // Transisi mulus Anbernic style: Tutup splash tepat saat UI SDL2 pertama siap
+    // Tutup Plymouth splash setelah UI aplikasi terbukti tampil di layar
     system("plymouth quit 2>/dev/null");
 
     int running = 1;
@@ -90,10 +107,7 @@ int main(int argc, char *argv[]) {
             }
         }
 
-        time_t now = time(NULL);
-        struct tm *t = localtime(&now);
-
-        // 1. Gambar Background
+        // 1. Gambar Background (Biru Malam Gelap Islami)
         SDL_SetRenderDrawColor(renderer, 15, 23, 42, 255);
         SDL_RenderClear(renderer);
 
@@ -101,17 +115,16 @@ int main(int argc, char *argv[]) {
         SDL_Rect header_rect = {40, 30, SCREEN_WIDTH - 80, 80};
         SDL_SetRenderDrawColor(renderer, 30, 41, 59, 255);
         SDL_RenderFillRect(renderer, &header_rect);
-        SDL_SetRenderDrawColor(renderer, 245, 158, 11, 255);
+        SDL_SetRenderDrawColor(renderer, 245, 158, 11, 255); // Aksen Emas
         SDL_RenderDrawRect(renderer, &header_rect);
 
         // 3. Jam Digital Besar di Tengah
         SDL_Rect clock_rect = {(SCREEN_WIDTH - 420) / 2, 150, 420, 240};
         SDL_SetRenderDrawColor(renderer, 24, 33, 47, 255);
         SDL_RenderFillRect(renderer, &clock_rect);
-        SDL_SetRenderDrawColor(renderer, 16, 185, 129, 255);
+        SDL_SetRenderDrawColor(renderer, 16, 185, 129, 255); // Border Hijau Zamrud
         SDL_RenderDrawRect(renderer, &clock_rect);
 
-        // Garis dekorasi jam
         SDL_Rect inner_clock = {(SCREEN_WIDTH - 400) / 2, 160, 400, 220};
         SDL_SetRenderDrawColor(renderer, 15, 23, 42, 255);
         SDL_RenderFillRect(renderer, &inner_clock);
@@ -122,7 +135,6 @@ int main(int argc, char *argv[]) {
             draw_card(renderer, cx, start_y, card_w, card_h, 
                       prayers[i].r, prayers[i].g, prayers[i].b);
 
-            // Garis indikator atas kartu
             SDL_Rect top_bar = {cx, start_y, card_w, 8};
             SDL_SetRenderDrawColor(renderer, 245, 158, 11, 255);
             SDL_RenderFillRect(renderer, &top_bar);
@@ -132,8 +144,8 @@ int main(int argc, char *argv[]) {
         SDL_Delay(100);
     }
 
-    if (renderer) SDL_DestroyRenderer(renderer);
-    if (window) SDL_DestroyWindow(window);
+    SDL_DestroyRenderer(renderer);
+    SDL_DestroyWindow(window);
     SDL_Quit();
 
     return 0;
