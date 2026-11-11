@@ -29,7 +29,8 @@ RES_Y="${RES_Y:-720}"
 DISPLAY_OPTS=""
 AUDIO_OPTS=""
 if [ -n "$DISPLAY" ]; then
-    DISPLAY_OPTS="-device virtio-gpu-pci,xres=${RES_X},yres=${RES_Y} -display gtk,zoom-to-fit=on"
+    # Menggunakan akselerasi 3D VirGL GPU untuk performa 60 FPS mulus
+    DISPLAY_OPTS="-device virtio-gpu-gl-pci,xres=${RES_X},yres=${RES_Y} -display gtk,gl=on,zoom-to-fit=on"
     AUDIO_OPTS="-audiodev pa,id=snd0 -device intel-hda -device hda-duplex,audiodev=snd0"
 else
     echo "Peringatan: Variabel DISPLAY tidak diset. Menjalankan dalam mode headless (-display none)."

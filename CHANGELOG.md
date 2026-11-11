@@ -1,5 +1,17 @@
 # CHANGELOG
 
+## [2026-11-11] Akselerasi GPU VirGL 3D, Hapus Software Renderer & Sinkronisasi UART Terminal
+- Apa yang diubah:
+  - Mengaktifkan akselerasi perangkat keras 3D GPU VirGL (`virtio-gpu-gl-pci` + `gtk,gl=on`) pada skrip `runQemu` untuk mengalirkan rendering langsung ke GPU PC host, mengatasi performa aplikasi yang lemot.
+  - Menghapus pembatasan `Environment=SDL_RENDER_DRIVER=software` dari `overlay/etc/systemd/system/jws.service` agar SDL2 menggunakan rendering GLES hardware terakselerasi.
+  - Mengonfigurasi `autologin.conf` pada `serial-getty` (`After=multi-user.target`) agar prompt terminal login serial UART tidak mendahului tampilan boot logo HDMI.
+  - Menambahkan flag `noauto,x-systemd.automount` pada mount partisi BOOT di `/etc/fstab` untuk mengeliminasi jeda 17 detik yang menunda proses booting.
+  - Merakit ulang berkas disk image `output/orangepi_zero3_jws.img` (3.0 GB).
+- Alasan: Mengatasi aplikasi jadwal salat yang lemot akibat software rendering di CPU emulasi dan mencegah terminal login UART muncul sebelum boot logo HDMI menyala.
+- File/komponen terdampak: `runQemu`, `overlay/etc/systemd/system/jws.service`, `overlay/etc/fstab`, `overlay/etc/systemd/system/serial-getty@*`, `output/orangepi_zero3_jws.img`, `CHANGELOG.md`.
+- Hasil uji: VirGL terkonfirmasi aktif di QEMU GTK, rendering dipercepat GPU host, dan terminal login serial muncul sinkron setelah layanan siap.
+- Commit / tag: `perf(app): aktifkan akselerasi virgl 3d dan sinkronkan serial getty dengan boot logo`
+
 ## [2026-11-11] Pulihkan Urutan Layanan Plymouth & Hapus Ordering Cycle
 - Apa yang diubah:
   - Menghapus override `overlay/etc/systemd/system/plymouth-start.service.d/override.conf` karena memicu ordering cycle yang membatalkan `systemd-udev-trigger.service`.

@@ -13,7 +13,6 @@ StandardInput=tty
 StandardOutput=tty
 StandardError=tty
 Environment=SDL_VIDEODRIVER=kmsdrm
-Environment=SDL_RENDER_DRIVER=software
 Environment=XDG_RUNTIME_DIR=/run/user/1000
 
 ExecStart=/usr/local/bin/jws-app
