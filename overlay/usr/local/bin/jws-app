@@ -3,12 +3,15 @@
 # Launcher untuk Aplikasi Jadwal Waktu Salat (SDL2 + ImGui)
 
 if [ -x "/opt/jws/jws" ]; then
+    # Tutup splash screen tepat saat aplikasi siap dieksekusi
+    plymouth quit --retain-splash 2>/dev/null || true
     exec /opt/jws/jws "$@"
 elif [ -x "/usr/local/bin/jws-bin" ]; then
+    plymouth quit --retain-splash 2>/dev/null || true
     exec /usr/local/bin/jws-bin "$@"
 else
-    # Fallback status runner jika aplikasi binary spesifik belum disalin ke rootfs
-    echo "Aplikasi JWS siap. Menunggu binary jadwal salat di /opt/jws/jws..."
+    # Jika aplikasi belum dipasang di /opt/jws/jws, splash animasi tetap berputar terus
+    echo "Aplikasi JWS standby. Menunggu binary jadwal salat di /opt/jws/jws..."
     while true; do
         sleep 60
     done

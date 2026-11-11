@@ -17,8 +17,6 @@ Environment=SDL_VIDEODRIVER=kmsdrm
 Environment=SDL_RENDER_DRIVER=opengles2
 Environment=XDG_RUNTIME_DIR=/run/user/1000
 
-# Tutup splash screen secara halus saat aplikasi siap
-ExecStartPost=-/bin/sh -c 'sleep 2 && plymouth quit --retain-splash 2>/dev/null || true'
 ExecStart=/usr/local/bin/jws-app
 Restart=always
 RestartSec=3

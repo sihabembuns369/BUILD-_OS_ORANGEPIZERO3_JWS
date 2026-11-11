@@ -1,5 +1,18 @@
 # CHANGELOG
 
+## [2026-11-11] Fix Jalur Pemuatan Frame Tema Plymouth dan Pemulihan Log UART Informatif
+- Apa yang diubah:
+  - Memperbaiki `overlay/usr/share/plymouth/themes/jws-animated/jws-animated.script`: Menggunakan path absolut tema (`/usr/share/plymouth/themes/jws-animated/`), menambahkan eksplisit `SetOpacity(1)`, dan sinkronisasi offset koordinat `Window.GetX()` / `Window.GetY()`.
+  - Memperbaiki `overlay/usr/local/bin/jws-app` dan `overlay/etc/systemd/system/jws.service`: Menghilangkan penutupan splash prematur setelah 2 detik, sehingga animasi Plymouth berputar terus-menerus tanpa henti sampai aplikasi jadwal salat fisik (`/opt/jws/jws`) benar-benar dieksekusi.
+  - Memulihkan log proses booting lengkap di UART konsol: Menghapus filter `ShowStatus=no` global dan mengembalikan `loglevel=4` pada UART serial di `runQemu`, sesuai spesifikasi dual-output di AGENTS.md (UART informatif, HDMI bersih).
+- Alasan: Animasi splash berhenti prematur karena perintah quit 2 detik pada jws.service dan log boot UART teredam oleh opsi quiet global sebelumnya.
+- File/komponen terdampak: `overlay/usr/share/plymouth/themes/jws-animated/jws-animated.script`, `overlay/usr/local/bin/jws-app`, `overlay/etc/systemd/system/jws.service`, `runQemu`, `CHANGELOG.md`.
+- Hasil uji (QEMU / board fisik):
+  - Log proses booting muncul lengkap dan real-time di terminal UART konsol serial.
+  - Autologin ke user `jws` tetap aktif.
+  - Plymouth tema `jws-animated` berjalan kontinu di DRM KMS `/dev/dri/card0` tanpa terhenti di awal boot.
+- Commit / tag: `fix(splash): perbaiki path frame tema plymouth dan pulihkan log uart`
+
 ## [2026-11-11] Fix Plymouth Serial Console Fallback dengan plymouth.ignore-serial-consoles
 - Apa yang diubah:
   - Menambahkan parameter kernel `plymouth.ignore-serial-consoles` pada baris perintah kernel di `runQemu`.
