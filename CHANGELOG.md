@@ -1,5 +1,22 @@
 # CHANGELOG
 
+## [2026-11-11] Pasang Aplikasi Dummy JWS SDL2 di /opt/jws/jws & Perbaiki Transisi Splash Anbernic
+- Apa yang diubah:
+  - Membuat dan mengompilasi program dummy aplikasi Jadwal Waktu Salat (JWS) dalam bahasa C + SDL2 (`src/dummy_jws.c`) untuk arsitektur ARM64 (`build/jws_dummy`, ukuran 11 KB).
+  - Meletakkan biner executable tersebut di `/opt/jws/jws` di dalam image OS.
+  - Memperbaiki grup user `jws` di `/etc/group` dengan menambahkan hak akses ke grup `video`, `render`, `input`, `audio`, dan `dialout` agar SDL2 KMS/DRM dapat mengakses display hardware `/dev/dri/card0` tanpa permission denied.
+  - Menghapus override systemd `plymouth-start.service.d/override.conf` yang sebelumnya memicu ordering cycle dengan `systemd-udev-trigger`, memastikan Plymouth dieksekusi secara mulus oleh systemd.
+  - Memperbaiki transisi Anbernic style: Plymouth splash screen memutar animasi boot saat booting berlangsung, lalu saat aplikasi `/opt/jws/jws` siap dan merender frame pertama di layar HDMI, aplikasi langsung mematikan Plymouth (`plymouth quit`) tanpa jeda kedip layar hitam.
+  - Merakit ulang berkas disk image `output/orangepi_zero3_jws.img` (3.0 GB).
+- Alasan: Permintaan pengguna untuk memasang biner dummy aplikasi JWS di `/opt/jws/jws` agar animasi booting bertransisi ke tampilan UI aplikasi.
+- File/komponen terdampak: `src/dummy_jws.c`, `overlay/opt/jws/jws`, `overlay/usr/local/bin/jws-app`, `overlay/usr/share/plymouth/themes/jws-animated/*`, `configs/splash.conf.example`, `output/orangepi_zero3_jws.img`, `CHANGELOG.md`.
+- Hasil uji (QEMU / board fisik):
+  - [x] Animasi boot GIF / logo berputar selama booting.
+  - [x] Layanan `jws.service` otomatis mengeksekusi `/opt/jws/jws`.
+  - [x] Transisi mulus ke antarmuka aplikasi dummy JWS fullscreen (KMS/DRM).
+- Commit / tag: `feat(app): pasang dummy biner jws sdl2 di /opt/jws/jws dan transisi anbernic`
+
+
 ## [2026-11-11] Implementasi Konsep Boot Logo Armbian/Anbernic & Standby Kiosk Transisi Bersih
 - Apa yang diubah:
   - Mengubah konfigurasi default sistem (`configs/splash.conf.example`, `overlay/usr/local/bin/splash-apply`) menjadi mode **Boot Logo statis (`MODE=image`)** bergaya Armbian/Anbernic, dengan logo default berlatar hitam polos tanpa teks status yang menumpuk.

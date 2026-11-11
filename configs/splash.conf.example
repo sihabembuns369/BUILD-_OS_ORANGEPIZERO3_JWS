@@ -3,7 +3,7 @@
 # Dapat diedit langsung dari PC melalui partisi BOOT (FAT32)
 
 ENABLED=yes                       # yes / no
-MODE=image                        # image (Boot Logo statis ala Armbian) | frames | gif
+MODE=gif                          # gif (Animasi boot.gif) | image | frames
 IMAGE=/boot/splash/logo.png       # Berkas logo yang ditampilkan (PNG / JPG)
 FRAMES_DIR=/boot/splash/frames    # Folder urutan frame (bila MODE=frames)
 GIF=/boot/splash/boot.gif         # Berkas animasi GIF (bila MODE=gif)
@@ -12,7 +12,7 @@ LOOP=yes                          # yes / no
 BACKGROUND_COLOR=#000000          # Warna latar belakang layar (hex)
 IMAGE_SCALE=fit                   # fit | fill | center | stretch
 POSITION=center                   # center | top | bottom
-TEXT=                             # Teks status di bawah logo (kosongkan untuk tampilan murni logo)
+TEXT=                             # Teks status di bawah logo/animasi (kosongkan untuk tampilan bersih)
 TEXT_COLOR=#FFFFFF
 PROGRESS_BAR=no                   # yes / no
 MIN_DURATION=2                    # Durasi minimum tampil (detik)

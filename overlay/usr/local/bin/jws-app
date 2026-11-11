@@ -2,14 +2,16 @@
 # /usr/local/bin/jws-app
 # Launcher untuk Aplikasi Jadwal Waktu Salat (SDL2 + ImGui)
 
-# Tutup Plymouth splash screen agar transisi ke UI atau standby
-plymouth quit 2>/dev/null || true
-
 if [ -x "/opt/jws/jws" ]; then
+    # Eksekusi aplikasi JWS; aplikasi menutup splash saat frame pertama siap (Anbernic style)
     exec /opt/jws/jws "$@"
 elif [ -x "/usr/local/bin/jws-bin" ]; then
     exec /usr/local/bin/jws-bin "$@"
 else
+    # Tahan splash screen selama 5 detik agar logo dapat dilihat
+    sleep 5
+    plymouth quit 2>/dev/null || true
+
     # Bersihkan layar HDMI (/dev/tty1) dan sembunyikan kursor
     clear
     printf "\033[?25l"
@@ -31,10 +33,9 @@ else
 
 EOF
 
-    # Loop standby: memantau jika biner aplikasi di-upload via SSH/UART
     while true; do
         if [ -x "/opt/jws/jws" ]; then
-            printf "\033[?25h" # Kembalikan kursor jika app butuh
+            printf "\033[?25h"
             clear
             exec /opt/jws/jws "$@"
         fi

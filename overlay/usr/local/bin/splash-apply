@@ -11,7 +11,7 @@ DEFAULT_LOGO="${THEME_DIR}/default_logo.png"
 
 # Default configuration fallback
 ENABLED="yes"
-MODE="image"
+MODE="gif"
 IMAGE="/boot/splash/logo.png"
 FRAMES_DIR="/boot/splash/frames"
 GIF="/boot/splash/boot.gif"

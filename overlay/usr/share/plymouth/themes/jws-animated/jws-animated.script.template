@@ -16,7 +16,7 @@ screen_y = Window.GetY();
 if (!screen_x) screen_x = 0;
 if (!screen_y) screen_y = 0;
 
-// Ukuran animasi responsif: 35% dari tinggi layar (min 140px, max 300px)
+// Ukuran responsif: 35% dari tinggi layar (min 140px, max 300px)
 target_dim = Math.Int(screen_h * 0.35);
 if (target_dim > 300) target_dim = 300;
 if (target_dim < 140) target_dim = 140;
@@ -36,9 +36,6 @@ if (position_mode == "top") {
 global.anim_pos_x = pos_x;
 global.anim_pos_y = pos_y;
 
-global.screen_sprite.SetPosition(pos_x, pos_y, 10);
-global.screen_sprite.SetOpacity(1);
-
 if (mode == "image") {
     raw_img = Image("splash.png");
     if (!raw_img) {
@@ -46,25 +43,41 @@ if (mode == "image") {
     }
 
     if (raw_img) {
-        // Skala responsif menjaga proporsi
         iw = raw_img.GetWidth();
         ih = raw_img.GetHeight();
         if (iw > 0 && ih > 0) {
             scale_ratio = target_dim / ih;
             new_w = Math.Int(iw * scale_ratio);
             new_h = Math.Int(ih * scale_ratio);
-            scaled_img = raw_img.Scale(new_w, new_h);
-            global.screen_sprite.SetImage(scaled_img);
-            global.screen_sprite.SetPosition(screen_x + Math.Int((screen_w - new_w) / 2), pos_y, 10);
+            global.scaled_img = raw_img.Scale(new_w, new_h);
         } else {
-            global.screen_sprite.SetImage(raw_img);
+            global.scaled_img = raw_img;
         }
+
+        global.screen_sprite.SetImage(global.scaled_img);
+        global.screen_sprite.SetPosition(screen_x + Math.Int((screen_w - global.scaled_img.GetWidth()) / 2), pos_y, 10);
         global.screen_sprite.SetOpacity(1);
     }
 
+    fun refresh_callback () {
+        w = Window.GetWidth();
+        h = Window.GetHeight();
+        if (w > 0 && h > 0 && global.scaled_img) {
+            img_w = global.scaled_img.GetWidth();
+            img_h = global.scaled_img.GetHeight();
+            cur_x = Window.GetX();
+            cur_y = Window.GetY();
+            if (!cur_x) cur_x = 0;
+            if (!cur_y) cur_y = 0;
+            global.screen_sprite.SetPosition(cur_x + Math.Int((w - img_w) / 2), cur_y + Math.Int((h - img_h) / 2) - 30, 10);
+            global.screen_sprite.SetOpacity(1);
+        }
+    }
+
+    Plymouth.SetRefreshFunction(refresh_callback);
+
 } else {
     // Mode Animation / Frames / GIF
-    // Muat dan resize seluruh frame ke ukuran responsif
     for (i = 0; i < frame_count; i++) {
         num = i + 1;
         idx_str = "";
@@ -80,11 +93,10 @@ if (mode == "image") {
 
     if (global.frames[0]) {
         global.screen_sprite.SetImage(global.frames[0]);
+        global.screen_sprite.SetPosition(pos_x, pos_y, 10);
         global.screen_sprite.SetOpacity(1);
     }
 
-    // Hitung kecepatan animasi berbasis tick 50Hz
-    // Contoh: 15 fps -> 50 / 15 ≈ 3 ticks per frame
     if (target_fps <= 0) target_fps = 15;
     divisor = Math.Int(50 / target_fps);
     if (divisor < 1) divisor = 1;
@@ -107,6 +119,16 @@ if (mode == "image") {
                 global.screen_sprite.SetImage(cur_frame);
             }
 
+            w = Window.GetWidth();
+            h = Window.GetHeight();
+            if (w > 0 && h > 0) {
+                cur_x = Window.GetX();
+                cur_y = Window.GetY();
+                if (!cur_x) cur_x = 0;
+                if (!cur_y) cur_y = 0;
+                global.screen_sprite.SetPosition(cur_x + Math.Int((w - target_dim) / 2), cur_y + Math.Int((h - target_dim) / 2) - 30, 10);
+            }
+
             global.progress++;
         }
     }
@@ -114,7 +136,7 @@ if (mode == "image") {
     Plymouth.SetRefreshFunction(refresh_callback);
 }
 
-// Render teks konfigurasi di bawah animasi
+// Render teks konfigurasi jika diset
 if (text_msg != "") {
     text_image = Image.Text(text_msg, text_r, text_g, text_b, 1, "Sans 16");
     if (text_image) {
@@ -129,8 +151,7 @@ if (text_msg != "") {
     }
 }
 
-// Redam 100% status dan pesan internal systemd ("Memuat Sistem...", dll)
-// agar layar HDMI murni hanya grafis animasi dan teks bersih yang dikonfigurasi
+// Redam 100% status dan pesan internal systemd agar layar HDMI murni grafis
 fun dummy_status_callback (status) {
 }
 Plymouth.SetUpdateStatusFunction(dummy_status_callback);
