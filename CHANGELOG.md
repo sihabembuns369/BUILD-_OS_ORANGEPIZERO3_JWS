@@ -1,5 +1,17 @@
 # CHANGELOG
 
+## [2026-11-11] Fix Plymouth Serial Console Fallback dengan plymouth.ignore-serial-consoles
+- Apa yang diubah:
+  - Menambahkan parameter kernel `plymouth.ignore-serial-consoles` pada baris perintah kernel di `runQemu`.
+  - Mengatasi perilaku bawaan Plymouth yang secara otomatis beralih ke mode teks/details jika mendeteksi port serial UART (`ttyS0`/`ttyAMA0`), sehingga kini Plymouth memuat tema grafis script `jws-animated` dan renderer KMS/DRM (`/dev/dri/card0`) di layar HDMI virtual.
+- Alasan: Layar HDMI QEMU sebelumnya menampilkan teks log rincian booting alih-alih animasi grafis akibat deteksi konsol serial UART.
+- File/komponen terdampak: `runQemu`, `CHANGELOG.md`.
+- Hasil uji (QEMU / board fisik):
+  - Modul `script.so` dan `drm.so` berhasil dimuat oleh Plymouth daemon (`/dev/dri/card0` dibuka).
+  - Teks rincian boot `[ OK ]` tidak lagi muncul di layar HDMI virtual.
+  - Serial console UART tetap berfungsi normal dengan autologin ke user `jws`.
+- Commit / tag: `fix(splash): abaikan serial console pada plymouth agar animasi grafis drm tampil`
+
 ## [2026-11-11] Fitur Autologin User jws dan Silent Booting untuk Splash Animasi Penuh
 - Apa yang diubah:
   - Mengonfigurasi autologin untuk user `jws` pada konsol serial (`serial-getty@ttyS0` dan `serial-getty@ttyAMA0`) serta HDMI konsol cadangan (`getty@tty2`).
