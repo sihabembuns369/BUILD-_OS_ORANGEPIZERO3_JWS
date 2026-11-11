@@ -164,10 +164,22 @@ cp -rv "${ROOT_DIR}/overlay/"* "${ROOTFS_DIR}/"
 cp -v "${ROOT_DIR}/tools/gif2splash.sh" "${ROOTFS_DIR}/usr/local/bin/"
 chmod +x "${ROOTFS_DIR}/usr/local/bin/"*
 
+# Buat /etc/fstab default jika belum ada
+cat <<EOF > "${ROOTFS_DIR}/etc/fstab"
+# /etc/fstab: static file system information
+LABEL=BOOT      /boot    vfat    defaults,x-systemd.before=local-fs.target    0    2
+EOF
+
 # Salin aset default ke direktori tema
 mkdir -p "${ROOTFS_DIR}/usr/share/plymouth/themes/jws-animated"
 cp -v "${ROOT_DIR}/default_assets/logo.png" "${ROOTFS_DIR}/usr/share/plymouth/themes/jws-animated/default_logo.png"
 cp -v "${ROOT_DIR}/default_assets/logo.png" "${ROOTFS_DIR}/usr/share/plymouth/themes/jws-animated/splash.png"
+
+# Ekstrak frame default animasi boot.gif langsung ke direktori tema agar siap sejak boot pertama
+if [ -f "${ROOT_DIR}/default_assets/boot.gif" ]; then
+    echo "==> Mengekstrak frame animasi default boot.gif..."
+    "${ROOT_DIR}/tools/gif2splash.sh" "${ROOT_DIR}/default_assets/boot.gif" "${ROOTFS_DIR}/usr/share/plymouth/themes/jws-animated" 60 "1280x720" || true
+fi
 
 # Aktifkan systemd units yang ada di overlay
 chroot "${ROOTFS_DIR}" /bin/bash -e << 'CHROOT_EOF'

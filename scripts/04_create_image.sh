@@ -27,9 +27,10 @@ mkdir -p "${STAGING_BOOT}/splash/frames" "${STAGING_BOOT}/extlinux"
 [ -f "${OUTPUT_DIR}/Image" ] && cp -v "${OUTPUT_DIR}/Image" "${STAGING_BOOT}/"
 [ -f "${OUTPUT_DIR}/sun50i-h618-orangepi-zero3.dtb" ] && cp -v "${OUTPUT_DIR}/sun50i-h618-orangepi-zero3.dtb" "${STAGING_BOOT}/"
 
-# Salin aset splash default
+# Salin aset splash default & frames pra-konversi
 cp -v "${ROOT_DIR}/default_assets/logo.png" "${STAGING_BOOT}/splash/"
 cp -v "${ROOT_DIR}/default_assets/boot.gif" "${STAGING_BOOT}/splash/"
+cp -v "${ROOT_DIR}/overlay/usr/share/plymouth/themes/jws-animated"/frame_*.png "${STAGING_BOOT}/splash/frames/" 2>/dev/null || true
 
 # Salin konfigurasi sistem & splash
 cp -v "${ROOT_DIR}/configs/splash.conf.example" "${STAGING_BOOT}/splash.conf"
@@ -43,7 +44,7 @@ cat <<EOF > "${STAGING_BOOT}/extlinux/extlinux.conf"
 LABEL OrangePi_Zero3_JWS
     LINUX /Image
     FDT /sun50i-h618-orangepi-zero3.dtb
-    APPEND root=/dev/mmcblk0p2 rootwait rw console=tty1 console=ttyS0,115200 quiet splash loglevel=3 vt.global_cursor_default=0
+    APPEND root=/dev/mmcblk0p2 rootwait rw console=tty1 console=ttyS0,115200 splash systemd.show_status=1 loglevel=7 plymouth.ignore-serial-consoles vt.global_cursor_default=0
 EOF
 
 echo "==> Membuat partisi BOOT (FAT32) dengan mformat & mcopy..."

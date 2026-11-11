@@ -1,5 +1,20 @@
 # CHANGELOG
 
+## [2026-11-11] Fix Evaluasi Skrip Plymouth Script Theme, Mounting Partisi Boot, dan Pemulihan Log UART Realtime
+- Apa yang diubah:
+  - Memperbaiki parser tema Plymouth `overlay/usr/share/plymouth/themes/jws-animated/jws-animated.script`: Plymouth script engine tidak mendukung `#include`, sehingga baris `#include "theme-vars.script"` sebelumnya diabaikan sebagai komentar dan seluruh variabel tema bernilai null (layar grafis tidak menggambar apa pun). Variabel konfigurasi kini di-generate langsung di header skrip utama Plymouth menggunakan `jws-animated.script.template`.
+  - Mengonfigurasi `overlay/etc/fstab` dengan opsi `x-systemd.before=local-fs.target` dan menambahkan auto-mount fallback di `overlay/usr/local/bin/splash-apply` agar konfigurasi `/boot/splash.conf` dan media GIF/frame selalu terbaca sebelum Plymouth dimulai.
+  - Memasukkan 24 frame PNG hasil konversi `default_assets/boot.gif` langsung ke direktori tema `overlay/usr/share/plymouth/themes/jws-animated/` dan direktori `/boot/splash/frames/` di image akhir sehingga animasi siap berputar sejak detik pertama boot tanpa memerlukan dependensi ffmpeg di SBC.
+  - Memperbaiki `runQemu` dan parameter kernel extlinux: Menggunakan `console=tty1 console=ttyAMA0,115200 splash systemd.show_status=1 loglevel=7 plymouth.ignore-serial-consoles vt.global_cursor_default=0` sehingga seluruh log proses boot kernel dan systemd muncul lengkap di UART konsol serial sementara tampilan HDMI dikhususkan untuk animasi splash Plymouth grafis.
+- Alasan: Layar HDMI virtual di QEMU menampilkan teks rincian boot alih-alih animasi grafis akibat `#include` tidak dievaluasi oleh Plymouth, `/boot` belum ter-mount saat `splash-apply` berjalan, dan log serial UART teredam oleh opsi quiet.
+- File/komponen terdampak: `overlay/etc/fstab`, `overlay/etc/systemd/system/splash-apply.service`, `overlay/usr/local/bin/splash-apply`, `overlay/usr/local/bin/gif2splash.sh`, `overlay/usr/share/plymouth/themes/jws-animated/`, `runQemu`, `scripts/03_build_rootfs.sh`, `scripts/04_create_image.sh`, `CHANGELOG.md`.
+- Hasil uji (QEMU / board fisik):
+  - Layar display HDMI mengaktifkan tema `jws-animated` dengan 24 frame animasi GIF berputar kontinu.
+  - Service `splash-apply.service` berhasil berstatus `active (exited)` dengan `status=0/SUCCESS`.
+  - Log proses booting kernel dan systemd muncul lengkap secara realtime di terminal UART (`ttyAMA0`/`ttyS0`).
+  - Terminal UART otomatis login ke prompt `jws@jws-pi:~$` tanpa meminta password.
+- Commit / tag: `fix(splash): perbaiki evaluasi skrip tema plymouth dan pulihkan log boot uart`
+
 ## [2026-11-11] Fix Jalur Pemuatan Frame Tema Plymouth dan Pemulihan Log UART Informatif
 - Apa yang diubah:
   - Memperbaiki `overlay/usr/share/plymouth/themes/jws-animated/jws-animated.script`: Menggunakan path absolut tema (`/usr/share/plymouth/themes/jws-animated/`), menambahkan eksplisit `SetOpacity(1)`, dan sinkronisasi offset koordinat `Window.GetX()` / `Window.GetY()`.

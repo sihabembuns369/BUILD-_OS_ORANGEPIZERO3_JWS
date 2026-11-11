@@ -13,7 +13,7 @@ DEFAULT_LOGO="${THEME_DIR}/default_logo.png"
 
 # Default configuration fallback
 ENABLED="yes"
-MODE="image"
+MODE="gif"
 IMAGE="/boot/splash/logo.png"
 FRAMES_DIR="/boot/splash/frames"
 GIF="/boot/splash/boot.gif"
@@ -41,6 +41,17 @@ err() {
 }
 
 mkdir -p "$CACHE_DIR" "$THEME_DIR"
+
+# Pastikan partisi /boot ter-mount jika belum
+if [ ! -f "$CONF_FILE" ]; then
+    if [ -b "/dev/disk/by-label/BOOT" ]; then
+        mount /dev/disk/by-label/BOOT /boot 2>/dev/null || true
+    elif [ -b "/dev/vda1" ]; then
+        mount /dev/vda1 /boot 2>/dev/null || true
+    elif [ -b "/dev/mmcblk0p1" ]; then
+        mount /dev/mmcblk0p1 /boot 2>/dev/null || true
+    fi
+fi
 
 # Aman membaca config tanpa eval
 if [ -f "$CONF_FILE" ]; then
@@ -145,30 +156,50 @@ fi
 
 log "Perubahan terdeteksi atau cache kosong. Memperbarui tema splash..."
 
+write_plymouth_script() {
+    local m="$1"
+    local fc="$2"
+    local tfps="$3"
+    local lmode="$4"
+    local smode="$5"
+    local pmode="$6"
+    local bgr="$7"
+    local bgg="$8"
+    local bgb="$9"
+    local tmsg="${10}"
+    local tr="${11}"
+    local tg="${12}"
+    local tb="${13}"
+
+    cat <<EOF > "${THEME_DIR}/jws-animated.script"
+// jws-animated.script - Dibuat otomatis oleh splash-apply
+mode = "${m}";
+bg_r = ${bgr};
+bg_g = ${bgg};
+bg_b = ${bgb};
+scale_mode = "${smode}";
+position_mode = "${pmode}";
+frame_count = ${fc};
+target_fps = ${tfps};
+loop_mode = ${lmode};
+text_msg = "${tmsg}";
+text_r = ${tr};
+text_g = ${tg};
+text_b = ${tb};
+
+EOF
+    if [ -f "${THEME_DIR}/jws-animated.script.template" ]; then
+        cat "${THEME_DIR}/jws-animated.script.template" >> "${THEME_DIR}/jws-animated.script"
+    fi
+}
+
 apply_fallback_logo() {
     warn "Menerapkan fallback ke logo default statis."
     if [ -f "$DEFAULT_LOGO" ]; then
         cp -f "$DEFAULT_LOGO" "${THEME_DIR}/splash.png" 2>/dev/null || true
     fi
-    cat <<EOF > "${THEME_DIR}/theme-vars.script"
-mode = "image";
-bg_r = 0.0;
-bg_g = 0.0;
-bg_b = 0.0;
-scale_mode = "fit";
-position_mode = "center";
-frame_count = 1;
-target_fps = 15;
-loop_mode = 0;
-text_msg = "Memuat jadwal salat...";
-text_r = 1.0;
-text_g = 1.0;
-text_b = 1.0;
-EOF
+    write_plymouth_script "image" 1 15 0 "fit" "center" 0.000 0.000 0.000 "Memuat jadwal salat..." 1.000 1.000 1.000
 }
-
-# Bersihkan frame lama
-rm -f "${THEME_DIR}"/frame_*.png "${THEME_DIR}"/splash.png
 
 SUCCESS=0
 FINAL_FRAME_COUNT=1
@@ -184,7 +215,7 @@ if [ "${MODE,,}" = "image" ]; then
 
 elif [ "${MODE,,}" = "gif" ]; then
     if [ -f "$GIF" ]; then
-        log "Mengonversi GIF animasi '$GIF' ke urutan frame PNG..."
+        log "Menyiapkan animasi GIF '$GIF'..."
         TEMP_CONV="${CACHE_DIR}/temp_frames"
         rm -rf "$TEMP_CONV"
         mkdir -p "$TEMP_CONV"
@@ -193,13 +224,12 @@ elif [ "${MODE,,}" = "gif" ]; then
             /usr/local/bin/gif2splash.sh "$GIF" "$TEMP_CONV" 60 "1280x720" 2>/dev/null || true
         elif command -v ffmpeg >/dev/null 2>&1; then
             ffmpeg -loglevel error -y -i "$GIF" "${TEMP_CONV}/frame_%03d.png" 2>/dev/null || true
-        elif command -v convert >/dev/null 2>&1; then
-            convert "$GIF" -coalesce -resize "1280x720>" "${TEMP_CONV}/frame_%03d.png" 2>/dev/null || true
         fi
         
         TOTAL_CONV=$(find "$TEMP_CONV" -maxdepth 1 -name "frame_*.png" 2>/dev/null | wc -l)
         if [ "$TOTAL_CONV" -gt 0 ]; then
             [ "$TOTAL_CONV" -gt 60 ] && TOTAL_CONV=60
+            rm -f "${THEME_DIR}"/frame_*.png
             COUNT=1
             for f in $(ls "$TEMP_CONV"/frame_*.png | sort | head -n "$TOTAL_CONV"); do
                 DEST=$(printf "${THEME_DIR}/frame_%03d.png" "$COUNT")
@@ -209,8 +239,23 @@ elif [ "${MODE,,}" = "gif" ]; then
             FINAL_FRAME_COUNT=$((COUNT - 1))
             SUCCESS=1
             rm -rf "$TEMP_CONV"
+        elif [ -d "$FRAMES_DIR" ] && [ "$(find "$FRAMES_DIR" -maxdepth 1 -name "*.png" 2>/dev/null | wc -l)" -gt 0 ]; then
+            log "Menggunakan frame hasil pra-konversi dari: $FRAMES_DIR"
+            COUNT=1
+            rm -f "${THEME_DIR}"/frame_*.png
+            for f in $(ls "$FRAMES_DIR"/*.png | sort | head -n 60); do
+                DEST=$(printf "${THEME_DIR}/frame_%03d.png" "$COUNT")
+                cp -f "$f" "$DEST"
+                COUNT=$((COUNT + 1))
+            done
+            FINAL_FRAME_COUNT=$((COUNT - 1))
+            SUCCESS=1
+        elif [ "$(find "$THEME_DIR" -maxdepth 1 -name "frame_*.png" 2>/dev/null | wc -l)" -gt 0 ]; then
+            log "Menggunakan frame animasi bawaan yang telah terpasang di tema."
+            FINAL_FRAME_COUNT=$(find "$THEME_DIR" -maxdepth 1 -name "frame_*.png" 2>/dev/null | wc -l)
+            SUCCESS=1
         else
-            warn "Gagal mengonversi GIF atau alat konversi belum tersedia. Fallback ke logo bawaan."
+            warn "Gagal mengonversi GIF dan tidak ada frame cadangan. Fallback ke logo statis."
         fi
     else
         warn "File GIF '$GIF' tidak ditemukan!"
@@ -221,6 +266,7 @@ elif [ "${MODE,,}" = "frames" ]; then
         log "Memproses urutan frame dari direktori: $FRAMES_DIR"
         FOUND_FRAMES=$(find "$FRAMES_DIR" -maxdepth 1 -name "*.png" 2>/dev/null | wc -l)
         if [ "$FOUND_FRAMES" -gt 0 ]; then
+            rm -f "${THEME_DIR}"/frame_*.png
             COUNT=1
             for f in $(ls "$FRAMES_DIR"/*.png | sort | head -n 60); do
                 DEST=$(printf "${THEME_DIR}/frame_%03d.png" "$COUNT")
@@ -245,21 +291,7 @@ if [ "$SUCCESS" -eq 1 ]; then
         FPS_VAL=15
     fi
 
-    cat <<EOF > "${THEME_DIR}/theme-vars.script"
-mode = "${MODE,,}";
-bg_r = ${BG_R};
-bg_g = ${BG_G};
-bg_b = ${BG_B};
-scale_mode = "${IMAGE_SCALE,,}";
-position_mode = "${POSITION,,}";
-frame_count = ${FINAL_FRAME_COUNT};
-target_fps = ${FPS_VAL};
-loop_mode = ${LOOP_VAL};
-text_msg = "${TEXT}";
-text_r = ${TXT_R};
-text_g = ${TXT_G};
-text_b = ${TXT_B};
-EOF
+    write_plymouth_script "${MODE,,}" "${FINAL_FRAME_COUNT}" "${FPS_VAL}" "${LOOP_VAL}" "${IMAGE_SCALE,,}" "${POSITION,,}" "${BG_R}" "${BG_G}" "${BG_B}" "${TEXT}" "${TXT_R}" "${TXT_G}" "${TXT_B}"
     log "Tema Plymouth dikonfigurasi: MODE=${MODE,,}, FRAMES=${FINAL_FRAME_COUNT}, FPS=${FPS_VAL}, LOOP=${LOOP_VAL}"
 else
     apply_fallback_logo
