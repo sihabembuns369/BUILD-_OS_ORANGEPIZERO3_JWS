@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## [2026-11-11] Fix Boot Logo di Mode VirGL 3D dengan Backend Display SDL (`-display sdl,gl=on`)
+- Apa yang diubah:
+  - Mengganti backend display di `runQemu` dari `-display gtk,gl=on,zoom-to-fit=off` menjadi `-display sdl,gl=on` bersama `-device virtio-gpu-gl-pci,xres=${RES_X},yres=${RES_Y}`.
+- Alasan: Pada sesi desktop Wayland, `-display gtk,gl=on` di QEMU 6.2 menggunakan `GtkGLArea` (`GtkGLArea console lacks DMABUF support`) yang gagal menampilkan scanout 2D dumb-buffer milik Plymouth saat boot awal. Backend `-display sdl,gl=on` mendukung penuh scanout 2D Plymouth (boot logo tampil tepat di tengah sejak awal boot) sekaligus akselerasi 3D VirGL untuk aplikasi `jadwalsholat_imgui` pada kanvas murni `1280x720` tanpa menu bar atau gap hitam.
+- File/komponen terdampak: `runQemu`, `CHANGELOG.md`.
+- Hasil uji (QEMU): Jendela `1280x720` langsung menampilkan animasi boot logo Plymouth tepat di tengah saat boot awal, lalu bertransisi mulus ke aplikasi `jadwalsholat_imgui` fullscreen tanpa gap dan dengan akselerasi VirGL 3D.
+- Commit / tag: `fix(qemu): gunakan backend display sdl gl=on agar boot logo dan virgl 3d tampil bersamaan`
+
 ## [2026-11-11] Fix JWS Lag & Black Gap di Jendela QEMU (VirGL 3D & zoom-to-fit=off)
 - Apa yang diubah:
   - Mengubah opsi display di `runQemu` dari `-device virtio-gpu-pci ... -display gtk,zoom-to-fit=on` menjadi `-device virtio-gpu-gl-pci,xres=${RES_X},yres=${RES_Y} -display gtk,gl=on,zoom-to-fit=off` serta menghapus emulasi perangkat audio PCI HDA yang tidak diperlukan.

@@ -28,7 +28,7 @@ RES_Y="${RES_Y:-720}"
 # Pilihan mode display: jika tidak ada DISPLAY (headless/ssh), fallback ke -display none
 DISPLAY_OPTS=""
 if [ -n "$DISPLAY" ]; then
-    DISPLAY_OPTS="-device virtio-gpu-gl-pci,xres=${RES_X},yres=${RES_Y} -display gtk,gl=on,zoom-to-fit=off"
+    DISPLAY_OPTS="-device virtio-gpu-gl-pci,xres=${RES_X},yres=${RES_Y} -display sdl,gl=on"
 else
     echo "Peringatan: Variabel DISPLAY tidak diset. Menjalankan dalam mode headless (-display none)."
     DISPLAY_OPTS="-device virtio-gpu-pci,xres=${RES_X},yres=${RES_Y} -display none"
