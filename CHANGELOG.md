@@ -1,14 +1,14 @@
 # CHANGELOG
 
-## [2026-11-11] Eksekusi Dini Plymouth Boot Screen (Tampil di Awal Booting)
+## [2026-11-11] Pulihkan Urutan Layanan Plymouth & Hapus Ordering Cycle
 - Apa yang diubah:
-  - Mengonfigurasi override systemd `overlay/etc/systemd/system/plymouth-start.service.d/override.conf` agar `plymouth-start.service` berjalan pada tahap paling awal (`Before=sysinit.target systemd-udev-trigger.service`) segera setelah socket journal siap.
-  - Menghapus antrean `After=systemd-udev-trigger.service` bawaan Debian, karena driver display KMS/DRM (`virtio-gpu`, `sun4i-drm`, `panfrost`) sudah terintegrasi (built-in) di kernel Linux, sehingga display langsung siap di detik ke-1 tanpa menunggu coldplug perangkat oleh udev.
+  - Menghapus override `overlay/etc/systemd/system/plymouth-start.service.d/override.conf` karena memicu ordering cycle yang membatalkan `systemd-udev-trigger.service`.
+  - Mengembalikan urutan standar Plymouth Debian yang stabil di mana `udev` menyiapkan `/dev/dri/card0` sebelum Plymouth aktif.
   - Merakit ulang berkas disk image `output/orangepi_zero3_jws.img` (3.0 GB).
-- Alasan: Mengatasi keterlambatan tampilan boot logo di layar HDMI / QEMU saat teks booting sudah mulai berjalan di UART.
+- Alasan: Mengatasi boot logo yang tidak muncul akibat device `/dev/dri/card0` tidak diinisialisasi ketika udev-trigger terhapus oleh ordering cycle.
 - File/komponen terdampak: `overlay/etc/systemd/system/plymouth-start.service.d/override.conf`, `output/orangepi_zero3_jws.img`, `CHANGELOG.md`.
-- Hasil uji: `plymouth-start.service` terverifikasi dieksekusi di detik awal booting (sebelum udev-trigger dan networkd).
-- Commit / tag: `perf(plymouth): jalankan boot screen sedini mungkin sebelum udev coldplug`
+- Hasil uji: Booting bersih tanpa ordering cycle (`NO ORDERING CYCLE! CLEAN!`) dan Plymouth start berjalan normal.
+- Commit / tag: `fix(plymouth): pulihkan urutan udev dan hapus override ordering cycle`
 
 ## [2026-11-11] Konfigurasi Tampilan QEMU Landscape Widescreen (1280x720 / 16:9)
 - Apa yang diubah:
