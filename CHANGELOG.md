@@ -1,5 +1,26 @@
 # CHANGELOG
 
+## [2026-11-11] Perbaikan Syntax Parser Plymouth Script, Eliminasi Abort splash-apply, Sudo Nopasswd, dan Timeout dev-ttyS0
+- Apa yang diubah:
+  - Memperbaiki sintaks skrip tema Plymouth `overlay/usr/share/plymouth/themes/jws-animated/jws-animated.script` dan template-nya:
+    - Menghapus deklarasi `frames = [];` yang sebelumnya memicu syntax error fatal (`Parser error: Expected valid contents of bracketed expression`) pada engine parser Plymouth Script bawaan Debian.
+    - Menghitung koordinat posisi dan pembaruan frame secara dinamis di dalam `refresh_callback()`, memastikan frame animasi tetap terpusat (`center`) dengan aman saat DRM window menyelesaikan modesetting tanpa risiko divide-by-zero.
+    - Mengonfigurasi 24 frame PNG dari `default_assets/boot.gif` dengan mode berulang (`loop_mode = 1`, 15 FPS) berkonsep persistent ala Anbernic hingga aplikasi jadwal salat siap.
+  - Memperbaiki skrip `/usr/local/bin/splash-apply`:
+    - Menghapus `set -e` yang sebelumnya memicu `[FAILED]` status akibat exit code non-zero pada evaluasi ekspresi kondisi bash.
+    - Mengubah dependensi `splash-apply.service` menjadi `After=boot.mount local-fs.target` agar partisi `/boot` (vfat) dipastikan sudah ter-mount rapi oleh systemd tanpa saling berebut lock mounting manual.
+  - Menghilangkan delay 90 detik di QEMU pada `dev-ttyS0.device` dengan menambahkan drop-in timeout 1 detik (`overlay/etc/systemd/system/dev-ttyS0.device.d/timeout.conf` dan `serial-getty@ttyS0.service.d/timeout.conf`), sehingga boot di QEMU instan dan di board fisik tetap mendeteksi UART0 secara native.
+  - Mengonfigurasi passwordless sudo untuk user `jws` di `overlay/etc/sudoers.d/jws` (mode `0440`).
+  - Menghapus symlink aktif `getty@tty1.service` dari `getty.target.wants/` dan memastikan masking ke `/dev/null` tetap berlaku agar tty1 murni dikuasai oleh mode grafis splash dan KMS/DRM SDL2.
+- Alasan: Mengatasi status gagal `[FAILED] Failed to start splash-apply.service`, memperbaiki layar blank hitam di QEMU akibat parser error tema Plymouth, serta memastikan boot serial UART lancar tanpa delay device.
+- File/komponen terdampak: `overlay/usr/local/bin/splash-apply`, `overlay/etc/systemd/system/splash-apply.service`, `overlay/usr/share/plymouth/themes/jws-animated/`, `overlay/etc/systemd/system/dev-ttyS0.device.d/`, `overlay/etc/systemd/system/serial-getty@ttyS0.service.d/`, `overlay/etc/sudoers.d/jws`, `build/rootfs.img`, `output/orangepi_zero3_jws.img`, `CHANGELOG.md`.
+- Hasil uji (QEMU / board fisik):
+  - `splash-apply.service` berjalan sukses (`[ OK ] Finished splash-apply.service`) tanpa kegagalan.
+  - Daemon Plymouth aktif normal (`plymouth-start.service` active running, PID aktif, `plymouth --ping` menghasilkan `PING_OK`, `plymouth --has-active-vt` = `HAS_ACTIVE_VT_YES`).
+  - Boot langsung meluncur ke prompt serial `jws@jws-pi:~$` tanpa hang.
+  - Filesystem ext4 bersih 100% (`e2fsck -f` return code 0).
+- Commit / tag: `fix(splash): perbaiki parser tema plymouth script, dependensi splash-apply, dan timeout ttyS0`
+
 ## [2026-11-11] Pembersihan Bloatware, Perampingan Rootfs (1.1 GB), dan Optimasi Embedded Kiosk
 - Apa yang diubah:
   - Melakukan audit dan pembersihan komprehensif terhadap paket non-esensial dan file sampah pada rootfs Debian arm64:

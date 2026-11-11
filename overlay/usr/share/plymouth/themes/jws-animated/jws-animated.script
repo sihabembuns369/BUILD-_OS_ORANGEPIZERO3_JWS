@@ -1,7 +1,4 @@
-// jws-animated.script
-// Theme Plymouth dinamis untuk Orange Pi Zero 3 JWS
-// Dibuat otomatis / dikonfigurasi via /boot/splash.conf
-
+// jws-animated.script - Dibuat otomatis untuk Orange Pi Zero 3 JWS
 mode = "gif";
 bg_r = 0.000;
 bg_g = 0.000;
@@ -18,88 +15,82 @@ text_b = 1.000;
 
 theme_dir = "/usr/share/plymouth/themes/jws-animated/";
 
-screen_width = Window.GetWidth();
-screen_height = Window.GetHeight();
-screen_x = Window.GetX();
-screen_y = Window.GetY();
-
 // Background color
 Window.SetBackgroundTopColor(bg_r, bg_g, bg_b);
 Window.SetBackgroundBottomColor(bg_r, bg_g, bg_b);
 
-// Sprite container utama
+// Sprite utama
 screen_sprite = Sprite();
 
 if (mode == "image") {
     raw_img = Image(theme_dir + "splash.png");
-    if (raw_img == NULL) {
+    if (!raw_img) {
         raw_img = Image(theme_dir + "default_logo.png");
     }
-    
-    img_w = raw_img.GetWidth();
-    img_h = raw_img.GetHeight();
-    
-    // Scale handling: fit / fill / stretch / center
-    if (scale_mode == "stretch") {
-        scaled_img = raw_img.Scale(screen_width, screen_height);
-    } else if (scale_mode == "fit") {
-        ratio = Math.Min(screen_width / img_w, screen_height / img_h);
-        scaled_img = raw_img.Scale(img_w * ratio, img_h * ratio);
-    } else if (scale_mode == "fill") {
-        ratio = Math.Max(screen_width / img_w, screen_height / img_h);
-        scaled_img = raw_img.Scale(img_w * ratio, img_h * ratio);
-    } else {
-        scaled_img = raw_img;
+
+    if (raw_img) {
+        screen_sprite.SetImage(raw_img);
+        screen_sprite.SetOpacity(1);
     }
-    
-    pos_x = screen_x + (screen_width - scaled_img.GetWidth()) / 2;
-    pos_y = screen_y + (screen_height - scaled_img.GetHeight()) / 2;
-    if (position_mode == "top") {
-        pos_y = screen_y + screen_height * 0.15;
-    } else if (position_mode == "bottom") {
-        pos_y = screen_y + screen_height * 0.7 - scaled_img.GetHeight();
+
+    fun refresh_callback () {
+        w = Window.GetWidth();
+        h = Window.GetHeight();
+        if (!w || w <= 0) w = 1280;
+        if (!h || h <= 0) h = 720;
+        x = Window.GetX();
+        y = Window.GetY();
+        if (!x) x = 0;
+        if (!y) y = 0;
+
+        if (raw_img) {
+            iw = raw_img.GetWidth();
+            ih = raw_img.GetHeight();
+            pos_x = x + (w - iw) / 2;
+            pos_y = y + (h - ih) / 2;
+            if (position_mode == "top") {
+                pos_y = y + h * 0.15;
+            } else if (position_mode == "bottom") {
+                pos_y = y + h * 0.7 - ih;
+            }
+            screen_sprite.SetPosition(pos_x, pos_y, 10);
+            screen_sprite.SetOpacity(1);
+        }
     }
-    
-    screen_sprite.SetImage(scaled_img);
-    screen_sprite.SetPosition(pos_x, pos_y, 10);
-    screen_sprite.SetOpacity(1);
-    
+
+    refresh_callback();
+    Plymouth.SetRefreshFunction(refresh_callback);
+
 } else {
     // Mode Animation / Frames / GIF
-    frames = [];
     for (i = 1; i <= frame_count; i++) {
         idx_str = "";
         if (i < 10) idx_str = "00" + i;
         else if (i < 100) idx_str = "0" + i;
         else idx_str = "" + i;
-        
+
         frames[i] = Image(theme_dir + "frame_" + idx_str + ".png");
     }
-    
+
     current_frame = 1;
     frame_timer = 0;
     anim_finished = 0;
-    
-    if (frame_count > 0 && frames[1] != NULL) {
-        screen_sprite.SetImage(frames[1]);
-        pos_x = screen_x + (screen_width - frames[1].GetWidth()) / 2;
-        pos_y = screen_y + (screen_height - frames[1].GetHeight()) / 2;
-        if (position_mode == "top") {
-            pos_y = screen_y + screen_height * 0.15;
-        } else if (position_mode == "bottom") {
-            pos_y = screen_y + screen_height * 0.7 - frames[1].GetHeight();
-        }
-        screen_sprite.SetPosition(pos_x, pos_y, 10);
-        screen_sprite.SetOpacity(1);
-    }
-    
+
     fun refresh_callback () {
+        w = Window.GetWidth();
+        h = Window.GetHeight();
+        if (!w || w <= 0) w = 1280;
+        if (!h || h <= 0) h = 720;
+        x = Window.GetX();
+        y = Window.GetY();
+        if (!x) x = 0;
+        if (!y) y = 0;
+
         if (anim_finished == 0 && frame_count > 1) {
             frame_timer++;
-            // Frekuensi Plymouth refresh adalah 50 Hz
             ticks_per_frame = 50 / target_fps;
             if (ticks_per_frame < 1) ticks_per_frame = 1;
-            
+
             if (frame_timer >= ticks_per_frame) {
                 frame_timer = 0;
                 current_frame++;
@@ -111,26 +102,53 @@ if (mode == "image") {
                         anim_finished = 1;
                     }
                 }
-                if (frames[current_frame] != NULL) {
-                    screen_sprite.SetImage(frames[current_frame]);
-                    screen_sprite.SetOpacity(1);
-                }
             }
         }
+
+        img = frames[current_frame];
+        if (!img && frames[1]) {
+            img = frames[1];
+        }
+
+        if (img) {
+            iw = img.GetWidth();
+            ih = img.GetHeight();
+            pos_x = x + (w - iw) / 2;
+            pos_y = y + (h - ih) / 2;
+            if (position_mode == "top") {
+                pos_y = y + h * 0.15;
+            } else if (position_mode == "bottom") {
+                pos_y = y + h * 0.7 - ih;
+            }
+            screen_sprite.SetImage(img);
+            screen_sprite.SetPosition(pos_x, pos_y, 10);
+            screen_sprite.SetOpacity(1);
+        }
     }
-    
+
     refresh_callback();
     Plymouth.SetRefreshFunction(refresh_callback);
 }
 
-// Text rendering jika ada
+// Text rendering
 if (text_msg != "") {
     text_image = Image.Text(text_msg, text_r, text_g, text_b, 1, "Sans 16");
-    if (text_image != NULL) {
+    if (text_image) {
         text_sprite = Sprite(text_image);
-        tx = screen_x + (screen_width - text_image.GetWidth()) / 2;
-        ty = screen_y + screen_height * 0.82;
-        text_sprite.SetPosition(tx, ty, 20);
-        text_sprite.SetOpacity(1);
+        fun message_refresh() {
+            w = Window.GetWidth();
+            h = Window.GetHeight();
+            if (!w || w <= 0) w = 1280;
+            if (!h || h <= 0) h = 720;
+            x = Window.GetX();
+            y = Window.GetY();
+            if (!x) x = 0;
+            if (!y) y = 0;
+            tx = x + (w - text_image.GetWidth()) / 2;
+            ty = y + h * 0.85;
+            text_sprite.SetPosition(tx, ty, 20);
+            text_sprite.SetOpacity(1);
+        }
+        message_refresh();
     }
 }

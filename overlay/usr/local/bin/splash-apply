@@ -3,8 +3,6 @@
 # Pengelola Splash Screen Dinamis untuk Orange Pi Zero 3 JWS
 # Menangani Image statis, Frame Sequences, dan Animasi GIF dengan Cache & Batas Aman
 
-set -e
-
 CONF_FILE="/boot/splash.conf"
 THEME_DIR="/usr/share/plymouth/themes/jws-animated"
 CACHE_DIR="/var/cache/splash"
@@ -42,24 +40,12 @@ err() {
 
 mkdir -p "$CACHE_DIR" "$THEME_DIR"
 
-# Pastikan partisi /boot ter-mount jika belum
-if [ ! -f "$CONF_FILE" ]; then
-    if [ -b "/dev/disk/by-label/BOOT" ]; then
-        mount /dev/disk/by-label/BOOT /boot 2>/dev/null || true
-    elif [ -b "/dev/vda1" ]; then
-        mount /dev/vda1 /boot 2>/dev/null || true
-    elif [ -b "/dev/mmcblk0p1" ]; then
-        mount /dev/mmcblk0p1 /boot 2>/dev/null || true
-    fi
-fi
-
 # Aman membaca config tanpa eval
 if [ -f "$CONF_FILE" ]; then
     while IFS='=' read -r key val || [ -n "$key" ]; do
         key=$(echo "$key" | tr -d ' \r\t')
         [[ "$key" =~ ^#.*$ ]] && continue
         [ -z "$key" ] && continue
-        # Bersihkan komentar inline dan spasi
         val=$(echo "$val" | sed -E 's/[ \t]+#.*$//' | sed -e 's/^[ \t]*//' -e 's/[ \t\r]*$//')
         val="${val%\"}"
         val="${val#\"}"
@@ -84,14 +70,14 @@ if [ -f "$CONF_FILE" ]; then
         esac
     done < "$CONF_FILE"
 else
-    warn "File $CONF_FILE tidak ditemukan, menggunakan nilai default."
+    warn "File $CONF_FILE belum tersedia, menggunakan tema default aktif."
 fi
 
 # Jika splash dinonaktifkan
 if [ "${ENABLED,,}" = "no" ]; then
     log "Splash dinonaktifkan via config."
     CURRENT_HASH="DISABLED"
-    if [ -f "$HASH_FILE" ] && [ "$(cat "$HASH_FILE")" = "$CURRENT_HASH" ]; then
+    if [ -f "$HASH_FILE" ] && [ "$(cat "$HASH_FILE" 2>/dev/null)" = "$CURRENT_HASH" ]; then
         exit 0
     fi
     if command -v plymouth-set-default-theme >/dev/null 2>&1; then
@@ -127,9 +113,9 @@ case "${MODE,,}" in
         TARGET_MEDIA="$GIF"
         ;;
     *)
-        warn "Mode '$MODE' tidak dikenali, fallback ke image."
-        MODE="image"
-        TARGET_MEDIA="$IMAGE"
+        warn "Mode '$MODE' tidak dikenali, fallback ke gif."
+        MODE="gif"
+        TARGET_MEDIA="$GIF"
         ;;
 esac
 
@@ -149,7 +135,7 @@ calc_hash() {
 }
 
 CURRENT_HASH="$(calc_hash)"
-if [ -f "$HASH_FILE" ] && [ "$(cat "$HASH_FILE")" = "$CURRENT_HASH" ]; then
+if [ -f "$HASH_FILE" ] && [ "$(cat "$HASH_FILE" 2>/dev/null)" = "$CURRENT_HASH" ]; then
     log "Konfigurasi dan media tidak berubah (cache valid). Melewati pembaruan."
     exit 0
 fi
@@ -207,7 +193,7 @@ FINAL_FRAME_COUNT=1
 if [ "${MODE,,}" = "image" ]; then
     if [ -f "$IMAGE" ]; then
         log "Menyiapkan splash gambar statis: $IMAGE"
-        cp -f "$IMAGE" "${THEME_DIR}/splash.png"
+        cp -f "$IMAGE" "${THEME_DIR}/splash.png" 2>/dev/null || true
         SUCCESS=1
     else
         warn "File gambar '$IMAGE' tidak ditemukan!"
@@ -228,10 +214,12 @@ elif [ "${MODE,,}" = "gif" ]; then
         
         TOTAL_CONV=$(find "$TEMP_CONV" -maxdepth 1 -name "frame_*.png" 2>/dev/null | wc -l)
         if [ "$TOTAL_CONV" -gt 0 ]; then
-            [ "$TOTAL_CONV" -gt 60 ] && TOTAL_CONV=60
+            if [ "$TOTAL_CONV" -gt 60 ]; then
+                TOTAL_CONV=60
+            fi
             rm -f "${THEME_DIR}"/frame_*.png
             COUNT=1
-            for f in $(ls "$TEMP_CONV"/frame_*.png | sort | head -n "$TOTAL_CONV"); do
+            for f in $(find "$TEMP_CONV" -maxdepth 1 -name "frame_*.png" | sort | head -n "$TOTAL_CONV"); do
                 DEST=$(printf "${THEME_DIR}/frame_%03d.png" "$COUNT")
                 cp -f "$f" "$DEST"
                 COUNT=$((COUNT + 1))
@@ -243,7 +231,7 @@ elif [ "${MODE,,}" = "gif" ]; then
             log "Menggunakan frame hasil pra-konversi dari: $FRAMES_DIR"
             COUNT=1
             rm -f "${THEME_DIR}"/frame_*.png
-            for f in $(ls "$FRAMES_DIR"/*.png | sort | head -n 60); do
+            for f in $(find "$FRAMES_DIR" -maxdepth 1 -name "*.png" | sort | head -n 60); do
                 DEST=$(printf "${THEME_DIR}/frame_%03d.png" "$COUNT")
                 cp -f "$f" "$DEST"
                 COUNT=$((COUNT + 1))
@@ -255,10 +243,15 @@ elif [ "${MODE,,}" = "gif" ]; then
             FINAL_FRAME_COUNT=$(find "$THEME_DIR" -maxdepth 1 -name "frame_*.png" 2>/dev/null | wc -l)
             SUCCESS=1
         else
-            warn "Gagal mengonversi GIF dan tidak ada frame cadangan. Fallback ke logo statis."
+            warn "Gagal mengonversi GIF dan tidak ada frame cadangan."
         fi
     else
-        warn "File GIF '$GIF' tidak ditemukan!"
+        warn "File GIF '$GIF' tidak ditemukan, memeriksa frame bawaan..."
+        if [ "$(find "$THEME_DIR" -maxdepth 1 -name "frame_*.png" 2>/dev/null | wc -l)" -gt 0 ]; then
+            log "Menggunakan frame animasi bawaan di tema."
+            FINAL_FRAME_COUNT=$(find "$THEME_DIR" -maxdepth 1 -name "frame_*.png" 2>/dev/null | wc -l)
+            SUCCESS=1
+        fi
     fi
 
 elif [ "${MODE,,}" = "frames" ]; then
@@ -268,7 +261,7 @@ elif [ "${MODE,,}" = "frames" ]; then
         if [ "$FOUND_FRAMES" -gt 0 ]; then
             rm -f "${THEME_DIR}"/frame_*.png
             COUNT=1
-            for f in $(ls "$FRAMES_DIR"/*.png | sort | head -n 60); do
+            for f in $(find "$FRAMES_DIR" -maxdepth 1 -name "*.png" | sort | head -n 60); do
                 DEST=$(printf "${THEME_DIR}/frame_%03d.png" "$COUNT")
                 cp -f "$f" "$DEST"
                 COUNT=$((COUNT + 1))
@@ -285,7 +278,9 @@ fi
 
 if [ "$SUCCESS" -eq 1 ]; then
     LOOP_VAL=1
-    [ "${LOOP,,}" = "no" ] && LOOP_VAL=0
+    if [ "${LOOP,,}" = "no" ]; then
+        LOOP_VAL=0
+    fi
     FPS_VAL="${FPS:-15}"
     if ! [[ "$FPS_VAL" =~ ^[0-9]+$ ]] || [ "$FPS_VAL" -le 0 ]; then
         FPS_VAL=15
@@ -299,11 +294,6 @@ fi
 
 if command -v plymouth-set-default-theme >/dev/null 2>&1; then
     plymouth-set-default-theme jws-animated 2>/dev/null || true
-fi
-
-# Update initramfs dengan batas waktu maksimal 10 detik agar boot tidak pernah terhambat
-if command -v update-initramfs >/dev/null 2>&1; then
-    timeout 10 update-initramfs -u 2>/dev/null || true
 fi
 
 echo "$CURRENT_HASH" > "$HASH_FILE"
