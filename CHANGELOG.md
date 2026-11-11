@@ -1,5 +1,17 @@
 # CHANGELOG
 
+## [2026-11-11] Fix SDL2 EGL Not Initialized & ALSA Audio Device
+- Apa yang diubah:
+  - Memasang pustaka Mesa EGL & GLESv2 (`libEGL.so.1`, `libEGL_mesa.so.0`, `libGLESv2.so.2`) dan konfigurasi vendor ICD GLVND (`/usr/share/glvnd/egl_vendor.d/50_mesa.json`) ke rootfs dan overlay.
+  - Memperbaiki `scripts/sync_rootfs_debugfs.py` untuk mendukung pembuatan symlink (`symlink filespec target`) dan permission file library `.so` (0755).
+  - Menambahkan modul ALSA loopback `snd-aloop` pada `/etc/modules-load.d/audio.conf` agar card index 0 selalu tersedia untuk SDL2_mixer.
+  - Menambahkan konfigurasi hardware audio virtual (`intel-hda` + `hda-duplex`) pada `runQemu`.
+  - Merakit ulang berkas disk image `output/orangepi_zero3_jws.img` (3.0 GB).
+- Alasan: Mengatasi error `SDL_CreateWindow Error: EGL not initialized` dan `ALSA Cannot get card index for 0` saat aplikasi jadwal salat berjalan.
+- File/komponen terdampak: `overlay/usr/lib/aarch64-linux-gnu/*`, `overlay/usr/share/glvnd/*`, `overlay/etc/modules-load.d/audio.conf`, `scripts/sync_rootfs_debugfs.py`, `runQemu`, `output/orangepi_zero3_jws.img`, `CHANGELOG.md`.
+- Hasil uji: Rootfs e2fsck 100% valid, autologin serial UART berfungsi normal, disk image 3.0GB berhasil dirakit ulang dan siap dijalankan.
+- Commit / tag: `fix(egl): tambahkan runtime mesa egl gles2 dan perbaiki alsa audio`
+
 ## [2026-11-11] Integrasi Aplikasi Jadwal Sholat ImGui (JadwalSholat_OrangePi) ke /opt/jws/
 - Apa yang diubah:
   - Mengintegrasikan paket aplikasi Jadwal Salat lengkap dari `src/JadwalSholat_OrangePi` (merujuk ke `releases/JadwalSholat_OrangePi`) ke dalam direktori `/opt/jws/` di dalam OS.
