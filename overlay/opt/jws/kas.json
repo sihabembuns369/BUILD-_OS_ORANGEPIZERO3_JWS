@@ -1,0 +1,70 @@
+{
+  "saldoAwal": 10000000,
+  "periode": "Bulan Berjalan",
+  "transaksi": [
+    {
+      "id": 1,
+      "tanggal": "2026-10-02",
+      "tipe": "masuk",
+      "kategori": "Kotak Amal Jumat",
+      "keterangan": "Infaq Sholat Jumat Pekan 1",
+      "nominal": 3850000
+    },
+    {
+      "id": 2,
+      "tanggal": "2026-10-05",
+      "tipe": "keluar",
+      "kategori": "Listrik & Air PDAM",
+      "keterangan": "Pembayaran Listrik PLN & Rekening Air Wudhu",
+      "nominal": 1250000
+    },
+    {
+      "id": 3,
+      "tanggal": "2026-10-07",
+      "tipe": "masuk",
+      "kategori": "Tromol Harian",
+      "keterangan": "Perolehan Kotak Tromol Harian Jamaah Pekan 1",
+      "nominal": 1450000
+    },
+    {
+      "id": 4,
+      "tanggal": "2026-10-09",
+      "tipe": "masuk",
+      "kategori": "Kotak Amal Jumat",
+      "keterangan": "Infaq Sholat Jumat Pekan 2",
+      "nominal": 4100000
+    },
+    {
+      "id": 5,
+      "tanggal": "2026-10-10",
+      "tipe": "keluar",
+      "kategori": "Kebersihan & Marbot",
+      "keterangan": "Honor Marbot & Pengadaan Cairan Pembersih",
+      "nominal": 1500000
+    },
+    {
+      "id": 6,
+      "tanggal": "2026-10-12",
+      "tipe": "masuk",
+      "kategori": "Donatur / Hamba Allah",
+      "keterangan": "Donasi Pembangunan & Renovasi Tempat Wudhu",
+      "nominal": 5000000
+    },
+    {
+      "id": 7,
+      "tanggal": "2026-10-14",
+      "tipe": "keluar",
+      "kategori": "Perawatan & Sound System",
+      "keterangan": "Servis Mic Wireless & Peremajaan Kabel Mic",
+      "nominal": 650000
+    },
+    {
+      "id": 8,
+      "tanggal": "2026-10-16",
+      "tipe": "masuk",
+      "kategori": "Kotak Amal Jumat",
+      "keterangan": "Infaq Sholat Jumat Pekan 3",
+      "nominal": 3900000
+    }
+  ]
+}

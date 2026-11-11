@@ -45,3 +45,7 @@ id_ed25519
 *.swp
 *~
 .DS_Store
+
+# Large media in opt/jws
+overlay/opt/jws/assets/video.mp4
+overlay/opt/jws/YT_DL/yt-dlp

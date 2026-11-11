@@ -1,0 +1,23 @@
+#!/bin/bash
+
+# Cek argumen
+if [ $# -lt 2 ]; then
+    echo "Usage: $0 <input_file> <output_file>"
+    exit 1
+fi
+
+INPUT="$1"
+OUTPUT="$2"
+
+# Detect dan hapus prefix data:image/...;base64,
+DATA=$(sed 's/^data:image\/[a-zA-Z]*;base64,//' "$INPUT")
+
+# Decode
+echo "$DATA" | base64 -d > "$OUTPUT"
+
+# Cek hasil
+if [ $? -eq 0 ]; then
+    echo "Sukses: disimpan ke $OUTPUT"
+else
+    echo "Gagal decode"
+fi

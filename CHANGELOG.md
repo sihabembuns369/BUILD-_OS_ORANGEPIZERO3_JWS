@@ -1,5 +1,20 @@
 # CHANGELOG
 
+## [2026-11-11] Integrasi Aplikasi Jadwal Sholat ImGui (JadwalSholat_OrangePi) ke /opt/jws/
+- Apa yang diubah:
+  - Mengintegrasikan paket aplikasi Jadwal Salat lengkap dari `src/JadwalSholat_OrangePi` (merujuk ke `releases/JadwalSholat_OrangePi`) ke dalam direktori `/opt/jws/` di dalam OS.
+  - Memasang biner ARM64 asli `jadwalsholat_imgui`, shared libraries (`lib/` berisi libSDL2, libSDL2_image, libSDL2_mixer, libSDL2_ttf, ffmpeg libs, libcrypto), konfigurasi JSON (`settings.json`, `hadits.json`, `kas.json`, `imgui.ini`), serta aset audio dan font.
+  - Membuat launcher `/opt/jws/jws` yang mengarahkan `LD_LIBRARY_PATH` ke `/opt/jws/lib` dan mengeksekusi `./jadwalsholat_imgui`.
+  - Mengupdate disk image `output/orangepi_zero3_jws.img` (3.0 GB).
+- Alasan: Permintaan pengguna untuk memasang aplikasi jadwal salat yang berada di `src/JadwalSholat_OrangePi`.
+- File/komponen terdampak: `overlay/opt/jws/*`, `.gitignore`, `output/orangepi_zero3_jws.img`, `CHANGELOG.md`.
+- Hasil uji (QEMU / board fisik):
+  - [x] Berkas paket aplikasi jadwal salat terpasang lengkap di `/opt/jws/`.
+  - [x] Launcher `/opt/jws/jws` executable dengan hak akses 0755.
+  - [x] Seluruh library runtime SDL2 & FFmpeg tersedia di `/opt/jws/lib`.
+- Commit / tag: `feat(app): integrasikan jadwalsholat_imgui dan pustaka lengkap ke /opt/jws`
+
+
 ## [2026-11-11] Pasang Aplikasi Dummy JWS SDL2 di /opt/jws/jws & Perbaiki Transisi Splash Anbernic
 - Apa yang diubah:
   - Membuat dan mengompilasi program dummy aplikasi Jadwal Waktu Salat (JWS) dalam bahasa C + SDL2 (`src/dummy_jws.c`) untuk arsitektur ARM64 (`build/jws_dummy`, ukuran 11 KB).
