@@ -49,17 +49,56 @@ echo "==> Image   : $IMG_FILE"
 echo "==> SSH Port: $SSH_PORT (ssh -p $SSH_PORT jws@localhost)"
 echo "==> Keluar  : Tekan Ctrl+A lalu X"
 
-eval qemu-system-aarch64 \
-  -M virt \
-  -cpu cortex-a53 \
-  -smp 4 \
-  -m 2G \
-  ${KERNEL_OPTS} \
-  -drive file="${IMG_FILE}",format=raw,if=virtio \
-  ${DISPLAY_OPTS} \
-  -serial stdio \
-  -device virtio-keyboard-pci \
-  -device virtio-mouse-pci \
-  -rtc base=localtime \
-  -netdev user,id=net0,hostfwd=tcp::${SSH_PORT}-:22 \
-  -device virtio-net-pci,netdev=net0
+# Workaround bug QEMU 6.x + VirGL: setelah guest reboot, konteks virglrenderer di host
+# tidak ter-reset ("map failed for element buffer") sehingga aplikasi tertahan di splash.
+# Solusi: guest reboot -> QEMU keluar (-no-reboot) -> skrip ini menjalankan ulang QEMU baru.
+# Guest shutdown/poweroff -> QEMU keluar dan skrip selesai.
+REBOOT_OPTS=""
+QMP_SOCK=""
+EVENT_LOG=""
+if command -v socat >/dev/null 2>&1; then
+    QMP_SOCK="/tmp/jws-qemu-qmp.$$.sock"
+    EVENT_LOG="/tmp/jws-qemu-events.$$.log"
+    REBOOT_OPTS="-no-reboot -qmp unix:${QMP_SOCK},server,nowait"
+    trap 'rm -f "$QMP_SOCK" "$EVENT_LOG"' EXIT
+fi
+
+while true; do
+  WATCH_PID=""
+  if [ -n "$QMP_SOCK" ]; then
+    rm -f "$QMP_SOCK"; : > "$EVENT_LOG"
+    (
+      for _ in $(seq 1 100); do [ -S "$QMP_SOCK" ] && break; sleep 0.1; done
+      { echo '{"execute":"qmp_capabilities"}'; while [ -S "$QMP_SOCK" ]; do sleep 1; done; } \
+        | socat - UNIX-CONNECT:"$QMP_SOCK" >> "$EVENT_LOG" 2>/dev/null
+    ) &
+    WATCH_PID=$!
+  fi
+
+  RC=0
+  eval qemu-system-aarch64 \
+    -M virt \
+    -cpu cortex-a53 \
+    -smp 4 \
+    -m 2G \
+    ${KERNEL_OPTS} \
+    -drive file="${IMG_FILE}",format=raw,if=virtio \
+    ${DISPLAY_OPTS} \
+    -serial stdio \
+    -device virtio-keyboard-pci \
+    -device virtio-mouse-pci \
+    -rtc base=localtime \
+    -netdev user,id=net0,hostfwd=tcp::${SSH_PORT}-:22 \
+    -device virtio-net-pci,netdev=net0 \
+    ${REBOOT_OPTS} || RC=$?
+
+  [ -n "$WATCH_PID" ] && { kill "$WATCH_PID" 2>/dev/null || true; wait "$WATCH_PID" 2>/dev/null || true; }
+
+  if [ -n "$EVENT_LOG" ] && grep -q '"guest-reset"' "$EVENT_LOG" 2>/dev/null; then
+    echo ""
+    echo "==> Guest melakukan reboot: menjalankan ulang QEMU (reset bersih VirGL)..."
+    sleep 1
+    continue
+  fi
+  exit $RC
+done

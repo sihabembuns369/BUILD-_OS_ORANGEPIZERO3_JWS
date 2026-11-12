@@ -1,5 +1,26 @@
 # CHANGELOG
 
+## [2026-11-12] Animasi Layar Loading Saat Inisialisasi Startup JWS (Anti Layar Hitam)
+- Apa yang diubah:
+  - Membuat modul `StartupScreen` (`include/StartupScreen.hpp`, `include/StartupFont.hpp`, `src/StartupScreen.cpp`) pada aplikasi Jadwal Salat Digital:
+    - Segera menginisialisasi jendela SDL2 & renderer di milidetik pertama peluncuran aplikasi dan langsung merender layar kanvas Islami gelap (`#0b1317`) sehingga layar HDMI/QEMU tidak mengalami kekosongan / blank hitam saat runtime dibaca.
+    - Menampilkan animasi putaran 12 titik bercahaya (*orbiting glowing dots ring*) mengelilingi bulan sabit emas (*golden crescent moon*) dan bintang 4 titik di piringan tengah kanvas (selaras dengan konsep boot logo).
+    - Menampilkan bilah progres (*progress bar*) modern bergradien hijau zamrud (*emerald glow*) dengan persentase progres dan teks status dinamis yang melaporkan proses inisialisasi secara bertahap:
+      - 15%: Membaca konfigurasi sistem (`settings.json`).
+      - 35%: Inisialisasi sistem audio & scan media suara.
+      - 55%: Memuat gambar latar slideshow & logo masjid (PNG 1024x1024).
+      - 70%: Inisialisasi basis data kas, hadits & remote IR.
+      - 85%: Membangun font antarmuka grafis ImGui & rasterisasi glyph atlas.
+      - 95%: Mengaktifkan layanan jaringan Wi-Fi & Web Server (port 8080).
+      - 100%: Transisi mulus ke dashboard utama jadwal sholat.
+    - Menyertakan *embedded 8x12 bitmap font* (diambil dari DejaVuSans-Bold) yang berdiri sendiri tanpa dependensi font eksternal atau I/O disk, menjamin teks selalu tajam dan instan.
+  - Mengintegrasikan `StartupScreen` ke dalam alur `main()` di `src/jadwalsholat_imgui.cpp`, memperbarui `Makefile` dan `build_orangepi.sh`.
+  - Mengkompilasi ulang binary `jadwalsholat_imgui` (x86_64) dan `jadwalsholat_imgui_opi` (ARM64 aarch64), memperbarui file di `overlay/opt/jws/jadwalsholat_imgui`, dan merakit ulang image `output/orangepi_zero3_jws.img`.
+- Alasan: Mengatasi jeda layar hitam beberapa detik saat aplikasi jadwal sholat dibuka pertama kali ketika aplikasi sedang memproses konfigurasi JSON, memuat audio, mendekode gambar logo PNG, dan merasterisasi font ImGui.
+- File/komponen terdampak: `include/StartupScreen.hpp`, `include/StartupFont.hpp`, `src/StartupScreen.cpp`, `src/jadwalsholat_imgui.cpp`, `Makefile`, `build_orangepi.sh`, `overlay/opt/jws/jadwalsholat_imgui`, `output/orangepi_zero3_jws.img`, `CHANGELOG.md`.
+- Hasil uji (QEMU & Host Linux): Aplikasi langsung menampilkan layar loading beranimasi halus saat dibuka, melaporkan setiap langkah pembacaan config & runtime hingga 100%, lalu berpindah mulus ke tampilan dashboard jadwal salat tanpa ada kedipan atau jeda layar hitam.
+- Commit / tag: `feat(jws): buat animasi loading startup saat inisialisasi config dan runtime`
+
 ## [2026-11-11] Fitur Tombol Restart & Shutdown Serta Perbaikan Navigasi Keyboard Menu JWS
 - Apa yang diubah:
   - Menambahkan fitur **🔄 Restart Sistem** dan **⏻ Matikan Daya (Shutdown)** beserta dialog konfirmasi aman di aplikasi Jadwal Salat (`UIWidgets.hpp`, `UIWidgets.cpp`, `TVSidebar.cpp`, `SettingsModal.cpp`, `jadwalsholat_imgui.cpp`). Tombol tersedia langsung di bagian bawah **Sidebar TV** (`Enter` / `F1` / `M`), di panel navigasi kiri **SettingsModal**, dan di footer bawah **SettingsModal**.
