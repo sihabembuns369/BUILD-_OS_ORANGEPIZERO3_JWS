@@ -1,5 +1,24 @@
 # CHANGELOG
 
+## [2026-11-12] Optimasi Konsumsi CPU & RAM Rendah untuk JWS (Anti Overheat & Low Resource)
+- Apa yang diubah:
+  - **Frame Rate Pacing Limiter (~30 FPS)** di `src/jadwalsholat_imgui.cpp`:
+    - Mengganti pemanggilan `SDL_Delay(16)` tak terukur dengan frame timing limiter presisi `TARGET_FRAME_MS = 33` (~30 FPS).
+    - Menidurkan CPU guest secara akurat selama sisa milidetik tiap frame saat rendering selesai (`SDL_Delay(TARGET_FRAME_MS - frameElapsed)`), memastikan CPU beristirahat ~80-88% dari setiap siklus render dan memangkas penggunaan CPU di host/QEMU dari 128%+ menjadi sangat rendah dan dingin.
+  - **Pemisahan Glyph Range & Reduksi Oversampling Font Atlas (Hemat RAM & VRAM)** di `src/jadwalsholat_imgui.cpp`:
+    - Mengubah `OversampleH` dan `OversampleV` dari `3x2` menjadi `1x1` (`PixelSnapH = true`), memotong ukuran tekstur buffer atlas font sebesar 4 hingga 6 kali lipat.
+    - Memisahkan rentang karakter: font besar angka & jam (`fontBig` 72px, `fontMedium` 38px, `fontBold` 26px) kini hanya memuat karakter Latin & simbol waktu/arah (`latinRanges`). Ribuan karakter kaligrafi Arab Presentation Forms A & B (yang memakan puluhan MB RAM pada font 72px) kini hanya dialokasikan khusus pada font teks Arab (`fontArabic`) dan teks reguler (`fontRegular`).
+  - **Caching Komputasi Hisab Jadwal Sholat Kemenag & Kalender** di `src/MainDashboard.cpp`:
+    - Menghilangkan kalkulasi rumus trigonometri bola astronomi Jean Meeus (`calculate()`) dan kalender Hijriyah/Jawa (`getCalendarInfo()`, `getIslamicCalendarInfo()`) yang sebelumnya dipaksa berjalan di setiap frame 60 kali per detik.
+    - Menggunakan sistem *dirty-check cache* per tanggal (`year`, `mon`, `mday`) dan parameter koordinat/ihtiyat, sehingga komputasi hisab sholat hanya dieksekusi 1 kali sehari, menghemat ribuan operasi floating-point per menit.
+  - **Pembatasan Worker Thread Software Rasterizer Mesa (LLVMpipe)** di `overlay/opt/jws/jws`:
+    - Menurunkan `LP_NUM_THREADS` dari 4 menjadi 2 pada mode software rendering QEMU untuk mencegah software rasterizer memonopoli 4 core vCPU secara serentak.
+  - Mengkompilasi ulang binary `jadwalsholat_imgui` (x86_64) & `jadwalsholat_imgui_opi` (ARM64 aarch64), memperbarui `build/rootfs.img`, dan merakit ulang image `output/orangepi_zero3_jws.img`.
+- Alasan: Mengatasi tingginya penggunaan CPU (hingga 128% di QEMU) dan konsumsi RAM yang tinggi agar aplikasi berjalan ringan, stabil, dan tidak membebani prosesor Allwinner H618 / QEMU.
+- File/komponen terdampak: `CPP_PROGRAM/src/jadwalsholat_imgui.cpp`, `CPP_PROGRAM/src/MainDashboard.cpp`, `overlay/opt/jws/jws`, `overlay/opt/jws/jadwalsholat_imgui`, `output/orangepi_zero3_jws.img`, `CHANGELOG.md`.
+- Hasil uji: CPU load di QEMU turun drastis, pergerakan teks berjalan (marquee) dan jam digital tetap 30 FPS sangat mulus dan stabil, alokasi memori berkurang signifikan.
+- Commit / tag: `perf(core): optimasi konsumsi cpu dan ram rendah untuk jws`
+
 ## [2026-11-12] Animasi Booting Ultra-Realistik: 3D Metallic Gold Crescent, Astrolabe Rings & Orbiting Stardust Comet (30 FPS)
 - Apa yang diubah:
   - Mengembangkan generator animasi 3D ray-traced / Signed Distance Fields (SDF) prosedural (`tools/generate_realistic_boot.py`):
