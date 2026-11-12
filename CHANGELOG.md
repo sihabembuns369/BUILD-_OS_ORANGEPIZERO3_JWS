@@ -1,5 +1,18 @@
 # CHANGELOG
 
+## [2026-11-12] Perbaikan Tampilan Modal Restart, Shutdown & QR Code Menjadi Terang dan Jelas
+- Apa yang diubah:
+  - Memperbaiki `RenderPowerModal` dan `RenderQRModal` pada `src/UIWidgets.cpp`:
+    - Mengganti layer redup dari `ImGui::GetForegroundDrawList()` menjadi `ImGui::GetBackgroundDrawList()` dengan tingkat peredupan lembut (`alpha 70`). Sebelumnya, `GetForegroundDrawList` merender lapisan hitam di atas seluruh jendela aplikasi termasuk di atas jendela dialog itu sendiri sehingga dialog tampak gelap seperti tertutup kaca film tebal.
+    - Mengubah warna latar dialog menjadi kartu slate terang berkontras tinggi (`#1e293b`), border emas/merah cerah yang menyala, dan padding lebih lapang.
+    - Teks pertanyaan dan deskripsi dibuat putih murni terang (`#ffffff`), teks petunjuk tombol dibuat biru langit cerah (`#88ddff`), dan warna tombol Restart/Shutdown dibuat jauh lebih cerah dan hidup.
+    - Memperbarui tombol kontrol daya di `src/TVSidebar.cpp` agar selaras cerah dan mudah dilihat dari jarak jauh.
+  - Mengkompilasi ulang binary `jadwalsholat_imgui` (x86_64) dan `jadwalsholat_imgui_opi` (ARM64 aarch64), memperbarui `overlay/opt/jws/jadwalsholat_imgui`, dan merakit ulang image `output/orangepi_zero3_jws.img`.
+- Alasan: Permintaan pengguna agar jendela dialog konfirmasi Restart dan Shutdown tidak tampak gelap/redup dan tampil terang jelas.
+- File/komponen terdampak: `src/UIWidgets.cpp`, `src/TVSidebar.cpp`, `overlay/opt/jws/jadwalsholat_imgui`, `output/orangepi_zero3_jws.img`, `CHANGELOG.md`.
+- Hasil uji: Dialog konfirmasi Restart, Shutdown, dan QR Code kini tampil cerah, tajam, dengan teks putih bersih dan tombol berwarna terang yang sangat mudah dibaca.
+- Commit / tag: `fix(ui): buat modal konfirmasi restart shutdown terang dan cerah`
+
 ## [2026-11-12] Animasi Layar Loading Saat Inisialisasi Startup JWS (Anti Layar Hitam)
 - Apa yang diubah:
   - Membuat modul `StartupScreen` (`include/StartupScreen.hpp`, `include/StartupFont.hpp`, `src/StartupScreen.cpp`) pada aplikasi Jadwal Salat Digital:
