@@ -1,5 +1,24 @@
 # CHANGELOG
 
+## [2026-11-12] Perbaikan Lonjakan CPU 200% Pemutaran Video Stream & YouTube (Anti Spin-Loop & Downscale Caching)
+- Apa yang diubah:
+  - **Eliminasi Spin-Loop Pacing Frame Video** di `src/VideoStreamPlayer.cpp`:
+    - Menghapus logika cacat `isBuffering` yang sebelumnya mem-bypass fungsi sleep frame saat buffer audio SDL dianggap kurang dari ambang batas.
+    - Mengganti pacing dengan wall-clock time presisi (`std::chrono::steady_clock`) yang wajib beristirahat (`std::this_thread::sleep_until(nextFrameTime)`) di setiap akhir frame video. Thread decoding video kini beristirahat ~75-85% di antara frame, mencegah loop tak terbatas (busy-wait) yang membakar 100% CPU core.
+  - **Pembatasan Core Decoder FFmpeg**:
+    - Mengubah `vCodec->thread_count` dari `0` (tak terbatas / seluruh core) menjadi `2` thread decoder, mencegah libavcodec memonopoli seluruh core CPU.
+  - **Downscaling Resolusi Cerdas (Maksimal 720p)**:
+    - Membatasi resolusi konversi software `sws_scale` ke target maksimal 1280x720 (atau sesuai aspect ratio sumber). Video resolusi 1080p/4K dari YouTube atau Live HLS tidak lagi di-scale dan diunggah ke VRAM sebesar 8.3 MB per frame secara mentah, melainkan di-downscale secara efisien dengan `SWS_FAST_BILINEAR`, menghemat komputasi dan bandwidth memori lebih dari 60%.
+  - **Pola Double-Buffering Asinkron Bebas Lock**:
+    - Memisahkan buffer konversi lokal (`localRgbaBuffer`) dengan buffer display (`s_RgbaBuffer`). Operasi berat `sws_scale` kini berjalan tanpa mengunci mutex utama GUI. Mutex hanya dikunci sepersekian mikrodetik untuk menukar pointer (`std::swap`), mencegah thread rendering ImGui tersendat atau menunggu kunci mutex.
+  - **Flow Control Demuxer Terkalibrasi**:
+    - Menjaga agar buffer audio tidak melebihi 1.2 detik dan demuxer tidak melompat terlalu jauh di depan playback.
+  - Mengkompilasi ulang binary `jadwalsholat_imgui` (x86_64) & `jadwalsholat_imgui_opi` (ARM64 aarch64), memperbarui `build/rootfs.img`, dan merakit ulang image `output/orangepi_zero3_jws.img`.
+- Alasan: Mengatasi keluhan CPU melonjak hingga 200% saat memutar video YouTube maupun live stream Mekah/Madinah.
+- File/komponen terdampak: `CPP_PROGRAM/src/VideoStreamPlayer.cpp`, `overlay/opt/jws/jadwalsholat_imgui`, `build/rootfs.img`, `output/orangepi_zero3_jws.img`, `CHANGELOG.md`.
+- Hasil uji: CPU usage saat memutar live stream Mekah & YouTube di host turun dari 200% ke kisaran ~70-80% dari single core; QEMU ARM64 turun ke kisaran ~63-70% tanpa lonjakan 200%.
+- Commit / tag: `fix(video): selesaikan lonjakan CPU 200% pada playback live stream dan YouTube`
+
 ## [2026-11-12] Optimasi Konsumsi CPU & RAM Rendah untuk JWS (Anti Overheat & Low Resource)
 - Apa yang diubah:
   - **Frame Rate Pacing Limiter (~30 FPS)** di `src/jadwalsholat_imgui.cpp`:
