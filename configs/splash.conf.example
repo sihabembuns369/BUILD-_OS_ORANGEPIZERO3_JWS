@@ -7,7 +7,7 @@ MODE=gif                          # gif (Animasi boot.gif) | image | frames
 IMAGE=/boot/splash/logo.png       # Berkas logo yang ditampilkan (PNG / JPG)
 FRAMES_DIR=/boot/splash/frames    # Folder urutan frame (bila MODE=frames)
 GIF=/boot/splash/boot.gif         # Berkas animasi GIF (bila MODE=gif)
-FPS=15                            # Kecepatan animasi (frame per detik bila MODE=gif/frames)
+FPS=30                            # Kecepatan animasi (frame per detik bila MODE=gif/frames)
 LOOP=yes                          # yes / no
 BACKGROUND_COLOR=#000000          # Warna latar belakang layar (hex)
 IMAGE_SCALE=fit                   # fit | fill | center | stretch

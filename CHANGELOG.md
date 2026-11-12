@@ -1,5 +1,22 @@
 # CHANGELOG
 
+## [2026-11-12] Animasi Booting Ultra-Realistik: 3D Metallic Gold Crescent, Astrolabe Rings & Orbiting Stardust Comet (30 FPS)
+- Apa yang diubah:
+  - Mengembangkan generator animasi 3D ray-traced / Signed Distance Fields (SDF) prosedural (`tools/generate_realistic_boot.py`):
+    - **Bulan Sabit Emas 3D (Metallic Gold Crescent)**: Menggunakan kubah permukaan normal 3D (*spherical dome normals*) dengan model pencahayaan ganda Blinn-Phong (cahaya utama matahari hangat + cahaya pengisi dingin cyan/emerald di tepi lekukan bulan + dynamic rotating edge glint berkilau emas). Dilengkapi *inner celestial disc* dengan *subtle ambient shading*.
+    - **Bintang Berlian 8-Ray (Optical Diamond Star)**: Bintang optik berlian dengan 8 berkas pancaran cahaya (*lens flare anamorphic rays*) dan inti putih keemasan yang berdenyut lembut (*subtle harmonic pulsation*).
+    - **Cincin Orbit Astrolabe Sakral**: 2 lingkaran orbit tipis berkilau emas halus (*concentric astrolabe rings*) dengan 12 penanda titik jam salat (*prayer hour tick markers*) yang menyala melingkar.
+    - **Komet Stardust Mengorbit**: Ekor partikel komet melengkung sepanjang 24 segmen dengan gradien warna biru langit ke hijau zamrud bercahaya (*luminous cyan-to-emerald gradient*), mengorbit cincin astrolabe secara mulus dan presisi.
+  - Menghasilkan 30 frame PNG RGBA 320x320 pixel beresolusi native Plymouth (`overlay/usr/share/plymouth/themes/jws-animated/frame_001.png` s.d. `frame_030.png`) sehingga Plymouth tidak perlu melakukan scaling gambar per frame di CPU Cortex-A53, menjamin animasi berjalan 30 FPS sangat halus (*zero lag/stutter*).
+  - Menghasilkan animasi GIF (`default_assets/boot.gif`) berukuran sangat hemat (422 KB, 30 FPS, loop seamless tak terbatas).
+  - Menghasilkan gambar splash U-Boot (`default_assets/splash.bmp`, 1280x720 24-bit uncompressed BMP) dengan frame pertama animasi yang terpusat persis pada koordinat pixel yang sama dengan Plymouth, menjamin handoff mulus tanpa pergeseran atau kedipan dari detik pertama board menyala.
+  - Memperbarui skrip tema Plymouth `jws-animated.script` (`frame_count = 30`, `target_fps = 30`) dan `configs/splash.conf.example` (`FPS=30`).
+  - Menginjeksi frame dan tema Plymouth baru ke `build/rootfs.img` dan merakit ulang image `output/orangepi_zero3_jws.img`.
+- Alasan: Permintaan pengguna untuk merubah animasi booting menjadi jauh lebih keren, realistis, dan selaras dengan tema boot logo / jadwal salat digital.
+- File/komponen terdampak: `tools/generate_realistic_boot.py`, `default_assets/boot.gif`, `default_assets/splash.bmp`, `default_assets/logo.png`, `overlay/usr/share/plymouth/themes/jws-animated/*`, `configs/splash.conf.example`, `output/orangepi_zero3_jws.img`, `CHANGELOG.md`.
+- Hasil uji: Animasi teruji berjalan sangat mulus dan stabil di Plymouth pada 30 FPS, ukuran file sangat kecil (< 1 MB total), transisi ke layar startup JWS berjalan lancar dan serasi tanpa distorsi visual.
+- Commit / tag: `feat(splash): perbarui animasi boot ke tema astrolabe dan bulan sabit 3d ultra-realistik 30 fps`
+
 ## [2026-11-12] Perbaikan Tampilan Modal Restart, Shutdown & QR Code Menjadi Terang dan Jelas
 - Apa yang diubah:
   - Memperbaiki `RenderPowerModal` dan `RenderQRModal` pada `src/UIWidgets.cpp`:
