@@ -26,6 +26,7 @@ busybox/
 cache/
 frames_out/
 /var/cache/splash/
+!overlay/var/cache/splash/last.hash
 
 # Sensitive & machine-specific configs
 authorized_keys

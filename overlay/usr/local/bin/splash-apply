@@ -203,35 +203,12 @@ if [ "${MODE,,}" = "image" ]; then
 elif [ "${MODE,,}" = "gif" ]; then
     if [ -f "$GIF" ]; then
         log "Menyiapkan animasi GIF '$GIF'..."
-        TEMP_CONV="${CACHE_DIR}/temp_frames"
-        rm -rf "$TEMP_CONV"
-        mkdir -p "$TEMP_CONV"
-        
-        if [ -x "/usr/local/bin/gif2splash.sh" ]; then
-            /usr/local/bin/gif2splash.sh "$GIF" "$TEMP_CONV" 60 "1280x720" 2>/dev/null || true
-        elif command -v ffmpeg >/dev/null 2>&1; then
-            ffmpeg -loglevel error -y -i "$GIF" "${TEMP_CONV}/frame_%03d.png" 2>/dev/null || true
-        fi
-        
-        TOTAL_CONV=$(find "$TEMP_CONV" -maxdepth 1 -name "frame_*.png" 2>/dev/null | wc -l)
-        if [ "$TOTAL_CONV" -gt 0 ]; then
-            if [ "$TOTAL_CONV" -gt 60 ]; then
-                TOTAL_CONV=60
-            fi
+        # Cek apakah frame pra-konversi sudah tersedia di $FRAMES_DIR untuk menghemat waktu boot (tanpa ffmpeg)
+        TOTAL_PRECONV=$(find "$FRAMES_DIR" -maxdepth 1 -name "*.png" 2>/dev/null | wc -l)
+        if [ "$TOTAL_PRECONV" -gt 0 ]; then
+            log "Menggunakan frame pra-konversi cepat dari: $FRAMES_DIR ($TOTAL_PRECONV frame)"
             rm -f "${THEME_DIR}"/frame_*.png
             COUNT=1
-            for f in $(find "$TEMP_CONV" -maxdepth 1 -name "frame_*.png" | sort | head -n "$TOTAL_CONV"); do
-                DEST=$(printf "${THEME_DIR}/frame_%03d.png" "$COUNT")
-                cp -f "$f" "$DEST"
-                COUNT=$((COUNT + 1))
-            done
-            FINAL_FRAME_COUNT=$((COUNT - 1))
-            SUCCESS=1
-            rm -rf "$TEMP_CONV"
-        elif [ -d "$FRAMES_DIR" ] && [ "$(find "$FRAMES_DIR" -maxdepth 1 -name "*.png" 2>/dev/null | wc -l)" -gt 0 ]; then
-            log "Menggunakan frame hasil pra-konversi dari: $FRAMES_DIR"
-            COUNT=1
-            rm -f "${THEME_DIR}"/frame_*.png
             for f in $(find "$FRAMES_DIR" -maxdepth 1 -name "*.png" | sort | head -n 60); do
                 DEST=$(printf "${THEME_DIR}/frame_%03d.png" "$COUNT")
                 cp -f "$f" "$DEST"
@@ -239,12 +216,39 @@ elif [ "${MODE,,}" = "gif" ]; then
             done
             FINAL_FRAME_COUNT=$((COUNT - 1))
             SUCCESS=1
-        elif [ "$(find "$THEME_DIR" -maxdepth 1 -name "frame_*.png" 2>/dev/null | wc -l)" -gt 0 ]; then
-            log "Menggunakan frame animasi bawaan yang telah terpasang di tema."
-            FINAL_FRAME_COUNT=$(find "$THEME_DIR" -maxdepth 1 -name "frame_*.png" 2>/dev/null | wc -l)
-            SUCCESS=1
         else
-            warn "Gagal mengonversi GIF dan tidak ada frame cadangan."
+            TEMP_CONV="${CACHE_DIR}/temp_frames"
+            rm -rf "$TEMP_CONV"
+            mkdir -p "$TEMP_CONV"
+            
+            if [ -x "/usr/local/bin/gif2splash.sh" ]; then
+                /usr/local/bin/gif2splash.sh "$GIF" "$TEMP_CONV" 60 "1280x720" 2>/dev/null || true
+            elif command -v ffmpeg >/dev/null 2>&1; then
+                ffmpeg -loglevel error -y -i "$GIF" "${TEMP_CONV}/frame_%03d.png" 2>/dev/null || true
+            fi
+            
+            TOTAL_CONV=$(find "$TEMP_CONV" -maxdepth 1 -name "frame_*.png" 2>/dev/null | wc -l)
+            if [ "$TOTAL_CONV" -gt 0 ]; then
+                if [ "$TOTAL_CONV" -gt 60 ]; then
+                    TOTAL_CONV=60
+                fi
+                rm -f "${THEME_DIR}"/frame_*.png
+                COUNT=1
+                for f in $(find "$TEMP_CONV" -maxdepth 1 -name "frame_*.png" | sort | head -n "$TOTAL_CONV"); do
+                    DEST=$(printf "${THEME_DIR}/frame_%03d.png" "$COUNT")
+                    cp -f "$f" "$DEST"
+                    COUNT=$((COUNT + 1))
+                done
+                FINAL_FRAME_COUNT=$((COUNT - 1))
+                SUCCESS=1
+                rm -rf "$TEMP_CONV"
+            elif [ "$(find "$THEME_DIR" -maxdepth 1 -name "frame_*.png" 2>/dev/null | wc -l)" -gt 0 ]; then
+                log "Menggunakan frame animasi bawaan yang telah terpasang di tema."
+                FINAL_FRAME_COUNT=$(find "$THEME_DIR" -maxdepth 1 -name "frame_*.png" 2>/dev/null | wc -l)
+                SUCCESS=1
+            else
+                warn "Gagal mengonversi GIF dan tidak ada frame cadangan."
+            fi
         fi
     else
         warn "File GIF '$GIF' tidak ditemukan, memeriksa frame bawaan..."
