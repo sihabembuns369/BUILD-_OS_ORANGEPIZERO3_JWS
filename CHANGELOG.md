@@ -1,5 +1,29 @@
 # CHANGELOG
 
+## [2026-11-13] Navigasi Otomatis D-Pad TV, Tombol Stepper Combo, dan Fokus Tombol LIHAT/BERSIHKAN
+- Apa yang diubah:
+  - **Navigasi Tombol LIHAT & BERSIHKAN di Virtual Keyboard**:
+    - Menambahkan baris indeks `-1` (Top Bar) pada grid navigasi D-Pad Virtual Keyboard.
+    - Pengguna keyboard fisik atau remote IR kini cukup menekan **PANAH ATAS (▲)** dari baris angka (`1 2 3 ...`) untuk memindahkan kursor kuning emas ke tombol `[ LIHAT ]` atau `[ BERSIHKAN ]`.
+    - Menekan **PANAH KIRI / KANAN** berpindah antara `LIHAT` dan `BERSIHKAN`.
+    - Menekan **ENTER / OK** langsung mengeksekusi toggle show/hide password atau membersihkan teks buffer.
+    - Menekan **PANAH BAWAH (▼)** dari baris atas langsung mengembalikan kursor ke baris angka keyboard.
+  - **Navigasi D-Pad 2-Arah Otomatis di Pengaturan (Bebas Kunci Fokus)**:
+    - Menambahkan navigasi otomatis dari panel konten kanan kembali ke panel menu Tab kiri cukup dengan menekan **PANAH KIRI (◀)** atau tombol navigasi remote tanpa dipaksa menekan tombol ESC!
+    - Dari menu Tab kiri, menekan **PANAH KANAN (▶)** atau **ENTER** otomatis masuk ke panel pengaturan.
+    - Menegaskan tombol **ESC** murni untuk fungsi **Kembali (Back) / Batal (Cancel)**:
+      - Saat di konten: ESC berfungsi sebagai Kembali ke Menu Tab.
+      - Saat di Menu Tab: ESC berfungsi sebagai Batal / Tutup Pengaturan.
+  - **Kontrol Pilihan Ramah TV & Remot (`TVCombo`)**:
+    - Mengganti seluruh combo pilihan (Tata Letak Layout, Tema Warna Palet, Kota Acuan, Media Mode, dan Animasi Slideshow) dengan widget `TVCombo`.
+    - Menyediakan tombol stepper cepat `[ < ]` dan `[ > ]` di samping combo sehingga pengguna remot dapat langsung berganti tema / layout secara live hanya dengan panah kiri/kanan.
+    - Auto-restore fokus kursor navigasi saat popup tertutup setelah pemilihan item (apply), mencegah hilangnya kursor highlight di layar TV.
+  - Memperbarui biner `overlay/opt/jws/jadwalsholat_imgui` dan menyuntikkannya ke `build/rootfs.img`, lalu merakit ulang image `output/orangepi_zero3_jws.img`.
+- Alasan: Menjawab pertanyaan pengguna mengenai cara berpindah ke tombol LIHAT / BERSIHKAN dengan tombol navigasi, serta memperbaiki pengalaman navigasi setting agar otomatis tanpa perlu menekan ESC setelah apply/enter.
+- File/komponen terdampak: `CPP_PROGRAM/src/VirtualKeyboard.cpp`, `CPP_PROGRAM/src/SettingsModal.cpp`, `CPP_PROGRAM/src/TVSidebar.cpp`, `overlay/opt/jws/jadwalsholat_imgui`, `build/rootfs.img`, `output/orangepi_zero3_jws.img`, `CHANGELOG.md`.
+- Hasil uji: Kompilasi sukses x86_64 dan aarch64 (Orange Pi Zero 3), navigasi D-pad lancar tanpa jebakan fokus, image OS 3.0GB berhasil dirakit.
+- Commit / tag: `feat(ui): navigasi d-pad otomatis, tombol stepper combo, dan fokus tombol lihat/bersihkan vk`
+
 ## [2026-11-13] Penambahan Dokumentasi Wiring Lengkap & Layanan Kipas CPU Otomatis
 - Apa yang diubah:
   - **Dokumentasi Wiring Lengkap di AGENTS.md & HowTo.md**:
