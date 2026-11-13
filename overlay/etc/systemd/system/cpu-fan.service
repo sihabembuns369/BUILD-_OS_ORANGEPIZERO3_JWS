@@ -1,0 +1,12 @@
+[Unit]
+Description=Orange Pi Zero 3 CPU Thermal Fan Control Service
+After=multi-user.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/cpu-fan-control
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

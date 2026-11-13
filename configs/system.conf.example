@@ -12,3 +12,14 @@ RTC_ENABLED=yes              # yes/no (aktifkan modul RTC eksternal)
 RTC_I2C_BUS=3                # nomor bus I2C (3 untuk Pin 3 SDA & Pin 5 SCL pada Orange Pi Zero 3)
 RTC_I2C_ADDR=0x68            # alamat I2C default DS3231 (0x68)
 RTC_TYPE=ds3231              # tipe chip: ds3231 | ds1307 | pcf8563
+
+# Kontrol Kipas Pendingin CPU Otomatis (Fan Control)
+FAN_ENABLED=yes              # yes/no (kontrol otomatis via GPIO transistor)
+FAN_PIN=10                   # Header Pin 10 (PC9)
+TEMP_ON=65                   # Nyalakan kipas saat suhu CPU >= 65 C
+TEMP_OFF=50                  # Matikan kipas saat suhu CPU <= 50 C
+
+# Relay Pengendali Amplifier Eksternal (Audio / Adzan Mute & Power)
+RELAY_ENABLED=yes            # yes/no (kontrol relay amplifier)
+RELAY_PIN=12                 # Header Pin 12 (PC6)
+RELAY_ACTIVE_HIGH=yes        # yes/no (yes jika relay aktif HIGH, no jika aktif LOW)

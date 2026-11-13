@@ -206,4 +206,11 @@ Fitur yang perlu diverifikasi pada board nyata:
   - Cek waktu RTC: `hwclock -r -f /dev/rtc1`.
   - Uji simpan waktu sistem ke RTC: `hwclock -w -f /dev/rtc1`.
   - Matikan daya, tunggu beberapa menit (tanpa internet), nyalakan kembali, dan pastikan jam langsung akurat.
+- [ ] **Relay Amplifier Eksternal**:
+  - Hubungkan IN modul relay ke Pin 11 (PC6 / GPIO 70), VCC ke Pin 2/4 (5V), GND ke Pin 9/14/20.
+  - Tes manual: `echo 70 > /sys/class/gpio/export; echo out > /sys/class/gpio/gpio70/direction; echo 1 > /sys/class/gpio/gpio70/value` (relay cetik ON).
+- [ ] **Kipas Pendingin CPU Otomatis**:
+  - Hubungkan rangkaian transistor basis ke Pin 10 (PC9 / GPIO 73).
+  - Layanan `cpu-fan.service` akan otomatis memantau `/sys/class/thermal/thermal_zone0/temp`. Kipas akan ON jika suhu >= 65°C dan OFF jika suhu <= 50°C.
+
 

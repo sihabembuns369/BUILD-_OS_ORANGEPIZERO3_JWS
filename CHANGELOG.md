@@ -1,5 +1,27 @@
 # CHANGELOG
 
+## [2026-11-13] Penambahan Dokumentasi Wiring Lengkap & Layanan Kipas CPU Otomatis
+- Apa yang diubah:
+  - **Dokumentasi Wiring Lengkap di AGENTS.md & HowTo.md**:
+    - Menambahkan diagram pinout 26-pin Orange Pi Zero 3 secara visual.
+    - Menambahkan tabel koneksi per komponen:
+      1. **RTC DS3231 (I2C)**: Pin 1 (3.3V), Pin 6 (GND), Pin 3 (SDA/I2C3), Pin 5 (SCL/I2C3).
+      2. **Sensor IR Receiver (VS1838B / TSOP4838)**: Pin 1/17 (3.3V), Pin 9/14 (GND), Pin 7 (PI1 / GPIO 78).
+      3. **Relay Amplifier Eksternal**: Pin 2/4 (5V), Pin 9/20 (GND), Pin 11 (PC6 / GPIO 70 untuk kontrol trigger ON/OFF AC amplifier masjid).
+      4. **Kipas CPU Otomatis**: Pin 2/4 (5V Fan+), Pin 10 (PC9 / GPIO 73 untuk basis transistor NPN/MOSFET saklar Fan-).
+      5. **Audio Output**: Output HDMI PCM digital stereo atau USB DAC sound card eksternal ke mixer masjid.
+  - **Layanan Kontrol Kipas Pendingin CPU Otomatis (`cpu-fan-control` & `cpu-fan.service`)**:
+    - Membuat skrip `/usr/local/bin/cpu-fan-control` dan service `cpu-fan.service`.
+    - Memantau suhu SoC Allwinner H618 melalui `/sys/class/thermal/thermal_zone0/temp`.
+    - Otomatis menyalakan kipas saat suhu CPU >= 65°C dan mematikan kembali saat suhu <= 50°C.
+    - Konfigurasi parameter suhu dan status aktif tersedia di `/boot/system.conf`.
+  - Menginjeksi service ke `build/rootfs.img` dan merakit ulang image `output/orangepi_zero3_jws.img`.
+- Alasan: Memenuhi permintaan pengguna untuk dokumentasi pengkabelan lengkap (RTC, IR remot, audio, relay amplifier) dan fitur kontrol kipas otomatis penurun panas CPU.
+- File/komponen terdampak: `AGENTS.md`, `HowTo.md`, `configs/system.conf.example`, `overlay/usr/local/bin/cpu-fan-control`, `overlay/etc/systemd/system/cpu-fan.service`, `build/rootfs.img`, `output/orangepi_zero3_jws.img`, `CHANGELOG.md`.
+- Hasil uji: Skrip dan service terpasang, image OS siap burn, dokumentasi rapi dan presisi.
+- Commit / tag: `docs(hardware): tambahkan dokumentasi wiring lengkap dan fitur kontrol kipas cpu otomatis`
+
+
 ## [2026-11-13] Integrasi Otomatis RTC Eksternal DS3231 (I2C) & Pembaruan AGENTS.md
 - Apa yang diubah:
   - **Pembaruan Dokumen AGENTS.md**:

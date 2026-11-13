@@ -134,6 +134,70 @@ SERIAL_BAUD=115200
 6. **UART debug**: UART0 aktif sebagai konsol serial (`ttyS0`) di device tree.
 7. **Ethernet**: driver aktif untuk akses SSH lewat kabel.
 8. 🆕 **RTC Eksternal (DS3231 via I2C)**: Driver kernel `rtc-ds1307` / `rtc-ds3232` aktif, instansiasi modul alamat `0x68` pada bus I2C (header Pin 3 SDA & Pin 5 SCL), sinkronisasi otomatis waktu sistem dari RTC saat boot (`hwclock -s`) dan penyimpanan waktu ke RTC saat shutdown/ubah jam (`hwclock -w`), sehingga jadwal sholat selalu presisi saat offline tanpa internet.
+9. 🆕 **Relay Pengendali Amplifier Eksternal**: Kontrol GPIO output (default Pin 12 / PC6) untuk menyalakan saklar daya amplifier masjid sebelum adzan/tarhim diputar dan mematikannya kembali setelah suara selesai agar amplifier tidak mendengung terus-menerus.
+10. 🆕 **Kontrol Kipas Pendingin CPU Otomatis**: Layanan pengawas suhu termal SoC Allwinner H618 (`/sys/class/thermal/thermal_zone0/temp`), otomatis menyalakan kipas (default Pin 10 / PC9 via transistor/MOSFET) saat suhu CPU >= 65°C dan mematikan kembali saat suhu dingin <= 50°C.
+
+# 🆕 DOKUMENTASI WIRING HARDWARE LENGKAP (ORANGE PI ZERO 3)
+
+## Diagram Pinout Header 26-Pin Orange Pi Zero 3
+```
+                  +3.3V Power  ( 1) ( 2)  +5V Power
+             I2C3_SDA / PI6    ( 3) ( 4)  +5V Power
+             I2C3_SCL / PI5    ( 5) ( 6)  GND
+                 PI1 / IR_RX   ( 7) ( 8)  UART1_TX / PH2
+                         GND   ( 9) (10)  PC9 / FAN_CONTROL
+      PC6 / RELAY_AMPLIFIER    (11) (12)  PC5
+                         PC8   (13) (14)  GND
+                        PC11   (15) (16)  PC10
+                  +3.3V Power  (17) (18)  PC14
+              SPI1_MOSI / PH7  (19) (20)  GND
+              SPI1_MISO / PH8  (21) (22)  PC15
+              SPI1_CLK  / PH6  (23) (24)  SPI1_CS / PH5
+                         GND   (25) (26)  PC1 / IR_ALT
+```
+
+---
+
+## Tabel Koneksi Pin Per Komponen
+
+### 1. Modul RTC I2C (DS3231)
+| Pin Modul DS3231 | Pin Header Orange Pi Zero 3 | Catatan Khusus |
+|------------------|-----------------------------|----------------|
+| **VCC**          | **Pin 1** (3.3V)            | Gunakan 3.3V (Aman untuk baterai CR2032 standar) |
+| **GND**          | **Pin 6** (GND)             | Ground |
+| **SDA**          | **Pin 3** (I2C3_SDA / PI6)  | Jalur Data I2C Bus 3 |
+| **SCL**          | **Pin 5** (I2C3_SCL / PI5)  | Jalur Clock I2C Bus 3 |
+
+### 2. Sensor Remote Infra Red (IR Receiver VS1838B / TSOP4838)
+| Pin Receiver IR  | Pin Header Orange Pi Zero 3 | Catatan Khusus |
+|------------------|-----------------------------|----------------|
+| **VCC**          | **Pin 1** atau **Pin 17** (3.3V) | Daya receiver 3.3V |
+| **GND**          | **Pin 9** atau **Pin 14** (GND) | Ground |
+| **OUT / DATA**   | **Pin 7** (PI1 / GPIO 78)   | Input sinyal remote NEC |
+
+### 3. Modul Relay Pengendali Amplifier Eksternal
+*Berfungsi menyalakan saklar AC amplifier eksternal saat murottal/adzan berbunyi dan mematikan setelah selesai.*
+| Pin Modul Relay  | Pin Header Orange Pi Zero 3 | Catatan Khusus |
+|------------------|-----------------------------|----------------|
+| **VCC**          | **Pin 2** atau **Pin 4** (5V)   | Daya koil relay 5V |
+| **GND**          | **Pin 9** atau **Pin 20** (GND) | Ground bersama |
+| **IN / SIGNAL**  | **Pin 11** (PC6 / GPIO 70)  | Kontrol ON/OFF logic 3.3V |
+| **NO & COM**     | Saklar Listrik Amplifier    | Memutus/menyambung jalur AC amplifier |
+
+### 4. Kipas Pendingin CPU Otomatis (Fan 5V via Transistor/MOSFET)
+*Kipas dikontrol otomatis via transistor 2N2222 / S8050 / N-Channel MOSFET.*
+| Terminal Kipas   | Koneksi Rangkaian            | Keterangan |
+|------------------|------------------------------|------------|
+| **Kipas (+) Merah** | **Pin 2** atau **Pin 4** (5V)| Daya kipas 5V |
+| **Kipas (-) Hitam** | Kolektor Transistor / Drain  | Saklar ground oleh transistor |
+| **Basis / Gate**    | **Pin 10** (PC9 / GPIO 73)   | Melalui resistor 1k Ohm ke Pin 10 |
+| **Emitter / Source**| **Pin 9** atau **Pin 14** (GND) | Ground bersama |
+
+### 5. Audio (Output Suara Masjid)
+- **Output Utama**: Audio HDMI (Digital PCM stereo) langsung ke TV / HDMI Audio Splitter.
+- **Output Eksternal**: USB DAC / USB Sound Card mini (Plug & Play ALSA) atau HDMI Audio Extractor untuk disambungkan ke Mixer / Amplifier Masjid via jack 3.5mm / RCA.
+
+---
 
 # 🆕 INTEGRASI RTC EKSTERNAL: DS3231 (I2C)
 ## Tujuan & Perilaku

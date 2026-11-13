@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+# /usr/local/bin/cpu-fan-control
+# Kontrol Kipas Otomatis Berdasarkan Suhu CPU Orange Pi Zero 3
+
+FAN_PIN=10 # Pin 10 (PC9) default
+TEMP_ON=65 # Nyalakan kipas jika suhu >= 65 C
+TEMP_OFF=50 # Matikan kipas jika suhu <= 50 C
+
+# Baca konfigurasi jika ada
+[ -f /boot/system.conf ] && eval "$(grep -E '^FAN_[A-Z_]+=' /boot/system.conf | sed 's/\r$//')"
+
+if [ "${FAN_ENABLED,,}" = "no" ]; then
+    exit 0
+fi
+
+# Setup GPIO via sysfs/gpioset jika belum
+if [ ! -d "/sys/class/gpio/gpio${FAN_PIN}" ]; then
+    echo "$FAN_PIN" > /sys/class/gpio/export 2>/dev/null || true
+    echo "out" > "/sys/class/gpio/gpio${FAN_PIN}/direction" 2>/dev/null || true
+fi
+
+while true; do
+    # Baca suhu dari thermal zone Allwinner H618 (milli-degree Celsius)
+    TEMP_RAW=$(cat /sys/class/thermal/thermal_zone0/temp 2>/dev/null || echo 40000)
+    TEMP_C=$((TEMP_RAW / 1000))
+
+    if [ "$TEMP_C" -ge "$TEMP_ON" ]; then
+        # Nyalakan kipas (HIGH)
+        echo 1 > "/sys/class/gpio/gpio${FAN_PIN}/value" 2>/dev/null || true
+    elif [ "$TEMP_C" -le "$TEMP_OFF" ]; then
+        # Matikan kipas (LOW)
+        echo 0 > "/sys/class/gpio/gpio${FAN_PIN}/value" 2>/dev/null || true
+    fi
+
+    sleep 5
+done
