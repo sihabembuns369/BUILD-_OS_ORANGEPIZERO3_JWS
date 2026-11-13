@@ -1,5 +1,20 @@
 # CHANGELOG
 
+## [2026-11-13] Restrukturisasi Ergonomis Modal Pengaturan (Hapus Footer Bar & Navigasi Remot Terpadu)
+- Apa yang diubah:
+  - **Penghapusan Baris Footer Bawah yang Tidak Terjangkau Remot**:
+    - Menghapus seluruh baris footer horizontal di bagian bawah modal pengaturan yang memotong tinggi layar dan tidak dapat diakses oleh kursor D-pad remote TV atau tombol panah keyboard.
+    - Menghapus pemotongan vertikal 54px pada `SettingsBodyContainer`, sehingga panel konten di sebelah kanan kini dapat memanfaatkan tinggi jendela secara penuh dan lebih lega.
+  - **Integrasi Tombol Aksi Langsung di Panel Navigasi Kiri**:
+    - Menempatkan tombol utama **`[💾 TERAPKAN & KELUAR]`** (warna hijau zamrud) tepat di bawah tab terakhir (*Remot IR*).
+    - Menempatkan tombol **`[✖ KELUAR (ESC)]`** (warna merah) serta tombol **`[🔄 Restart]`** dan **`[⏻ Shutdown]`** di bawahnya.
+    - Menghapus pembatasan *wrap-around* tab ke bawah yang sebelumnya memantulkan kursor kembali ke Tab 0 saat menekan panah Bawah di tab terakhir, sehingga kursor D-pad remot TV dan keyboard kini secara alami dan mulus mengalir turun dari tab *Remot IR* langsung ke tombol `[💾 TERAPKAN & KELUAR]`.
+  - Mengkompilasi ulang binary `jadwalsholat_imgui` (x86_64) & `jadwalsholat_imgui_opi` (ARM64 aarch64), menginjeksi ke `build/rootfs.img`, dan merakit ulang image `output/orangepi_zero3_jws.img`.
+- Alasan: Memenuhi permintaan pengguna agar tombol-tombol tidak ditaruh di footer bawah yang memotong layar dan sulit dijangkau remot, melainkan terintegrasi langsung di bawah daftar tab navigasi kiri.
+- File/komponen terdampak: `CPP_PROGRAM/src/SettingsModal.cpp`, `overlay/opt/jws/jadwalsholat_imgui`, `build/rootfs.img`, `output/orangepi_zero3_jws.img`, `CHANGELOG.md`.
+- Hasil uji: Footer bawah hilang, area kanan lebih luas dan bersih, kursor remote dengan panah Bawah langsung turun ke tombol Terapkan & Keluar dan tombol Keluar.
+- Commit / tag: `refactor(ui): hapus footer bar modal pengaturan dan pindahkan aksi simpan ke panel navigasi kiri`
+
 ## [2026-11-13] Navigasi Otomatis Setelah Apply Setting (Bebas Tekan ESC)
 - Apa yang diubah:
   - **Tombol Terapkan & Simpan Otomatis Keluar Menu (`[💾 TERAPKAN & SIMPAN (APPLY)]`)**:
