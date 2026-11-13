@@ -1,5 +1,20 @@
 # CHANGELOG
 
+## [2026-11-13] Navigasi Otomatis Setelah Apply Setting (Bebas Tekan ESC)
+- Apa yang diubah:
+  - **Tombol Terapkan & Simpan Otomatis Keluar Menu (`[💾 TERAPKAN & SIMPAN (APPLY)]`)**:
+    - Menambahkan tombol utama di footer bawah `TVSidebar` (bisa diakses langsung dari semua tab) dan di dalam tab pengaturan yang mengeksekusi `ConfigManager::Save()` sekaligus memanggil `Close()` secara otomatis.
+    - Pada `SettingsModal`, tombol simpan diperbarui menjadi `💾 TERAPKAN & TUTUP (APPLY)` yang menyimpan pengaturan dan langsung menutup jendela modal (`openModal = false`).
+    - Setelah ditekan lewat mouse, tombol Enter keyboard, atau tombol OK pada remote IR, menu pengaturan seketika tertutup dan kontrol keyboard/remote langsung kembali aktif ke dashboard utama tanpa pengguna harus menekan tombol ESC terlebih dahulu.
+  - **Pelepasan Fokus Input Virtual Keyboard**:
+    - Menambahkan `ImGui::ClearActiveID()` pada saat `VirtualKeyboard::Close()` dipanggil agar fokus input tidak tertahan di dalam elemen form.
+    - Memperbarui label tombol aksi submit menjadi `TERAPKAN` agar lebih intuitif.
+  - Mengkompilasi ulang binary `jadwalsholat_imgui` (x86_64) & `jadwalsholat_imgui_opi` (ARM64 aarch64), menginjeksi ke `build/rootfs.img`, dan merakit ulang image `output/orangepi_zero3_jws.img`.
+- Alasan: Mengatasi kendala di mana setelah user menekan Apply / Simpan setting via keyboard atau remot, menu setting tetap terbuka dan menahan kontrol sehingga user terpaksa harus menekan tombol ESC secara manual terlebih dahulu baru dashboard bisa dikontrol kembali.
+- File/komponen terdampak: `CPP_PROGRAM/src/TVSidebar.cpp`, `CPP_PROGRAM/src/SettingsModal.cpp`, `CPP_PROGRAM/src/VirtualKeyboard.cpp`, `overlay/opt/jws/jadwalsholat_imgui`, `build/rootfs.img`, `output/orangepi_zero3_jws.img`, `CHANGELOG.md`.
+- Hasil uji: Setelah klik tombol Terapkan & Simpan (Apply), sidebar/modal langsung menutup otomatis dan tombol panah kiri/kanan (pindah slide foto) serta remote IR langsung aktif mengontrol dashboard tanpa perlu menekan tombol ESC.
+- Commit / tag: `feat(ui): tombol apply otomatis simpan dan tutup menu ke dashboard tanpa perlu tekan esc`
+
 ## [2026-11-12] Perbaikan Lonjakan CPU 200% Pemutaran Video Stream & YouTube (Anti Spin-Loop & Downscale Caching)
 - Apa yang diubah:
   - **Eliminasi Spin-Loop Pacing Frame Video** di `src/VideoStreamPlayer.cpp`:
