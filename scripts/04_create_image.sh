@@ -40,12 +40,58 @@ cp -v "${ROOT_DIR}/configs/system.conf.example" "${STAGING_BOOT}/system.conf"
 cp -v "${ROOT_DIR}/configs/system.conf.example" "${STAGING_BOOT}/system.conf.example"
 cp -v "${ROOT_DIR}/configs/wifi.conf.example" "${STAGING_BOOT}/wifi.conf.example"
 
-# Konfigurasi Extlinux untuk U-Boot autoboot
+# Konfigurasi Extlinux untuk U-Boot autoboot (dengan CMA 192M & video HDMI-A-1:edid)
 cat <<EOF > "${STAGING_BOOT}/extlinux/extlinux.conf"
 LABEL OrangePi_Zero3_JWS
     LINUX /Image
     FDT /sun50i-h618-orangepi-zero3.dtb
-    APPEND root=/dev/mmcblk0p2 rootwait rw console=tty1 console=ttyS0,115200 quiet splash loglevel=3 plymouth.ignore-serial-consoles plymouth.ignore-udev vt.global_cursor_default=0
+    APPEND root=/dev/mmcblk0p2 rootwait rw video=HDMI-A-1:edid cma=192M drm.debug=0x1e console=ttyS0,115200 console=tty1 quiet splash loglevel=3 plymouth.ignore-serial-consoles plymouth.ignore-udev vt.global_cursor_default=0
+EOF
+
+# Konfigurasi boot.cmd & boot.scr standar U-Boot Allwinner sunxi
+cat << 'EOF' > "${STAGING_BOOT}/boot.cmd"
+# Boot script for Orange Pi Zero 3 (Allwinner H618)
+setenv fdtfile sun50i-h618-orangepi-zero3.dtb
+setenv rootdev /dev/mmcblk0p2
+setenv bootargs "console=ttyS0,115200 console=tty1 root=${rootdev} rootwait rw video=HDMI-A-1:edid cma=192M drm.debug=0x1e quiet splash loglevel=3 plymouth.ignore-serial-consoles plymouth.ignore-udev vt.global_cursor_default=0"
+
+# Muat Kernel Image (fallback /boot/Image, /Image, Image)
+if fatload mmc 0:1 ${kernel_addr_r} /boot/Image; then
+    echo "Kernel loaded from /boot/Image"
+elif fatload mmc 0:1 ${kernel_addr_r} /Image; then
+    echo "Kernel loaded from /Image"
+elif fatload mmc 0:1 ${kernel_addr_r} Image; then
+    echo "Kernel loaded from Image"
+fi
+
+# Muat Device Tree DTB (fallback /boot/dtb, /dtb, dtb)
+if fatload mmc 0:1 ${fdt_addr_r} /boot/${fdtfile}; then
+    echo "DTB loaded from /boot/${fdtfile}"
+elif fatload mmc 0:1 ${fdt_addr_r} /${fdtfile}; then
+    echo "DTB loaded from /${fdtfile}"
+elif fatload mmc 0:1 ${fdt_addr_r} ${fdtfile}; then
+    echo "DTB loaded from ${fdtfile}"
+fi
+
+booti ${kernel_addr_r} - ${fdt_addr_r}
+EOF
+
+# Compile boot.cmd menjadi binary script U-Boot boot.scr
+mkimage -C none -A arm64 -T script -d "${STAGING_BOOT}/boot.cmd" "${STAGING_BOOT}/boot.scr"
+
+# Siapkan folder /boot di dalam partisi FAT32 sebagai fallback path
+mkdir -p "${STAGING_BOOT}/boot"
+cp -v "${STAGING_BOOT}/Image" "${STAGING_BOOT}/boot/" 2>/dev/null || true
+cp -v "${STAGING_BOOT}/sun50i-h618-orangepi-zero3.dtb" "${STAGING_BOOT}/boot/" 2>/dev/null || true
+cp -v "${STAGING_BOOT}/boot.cmd" "${STAGING_BOOT}/boot/" 2>/dev/null || true
+cp -v "${STAGING_BOOT}/boot.scr" "${STAGING_BOOT}/boot/" 2>/dev/null || true
+
+# Sediakan uEnv.txt di root partisi FAT32 untuk kompatibilitas firmware U-Boot legacy
+cat << 'EOF' > "${STAGING_BOOT}/uEnv.txt"
+fdtfile=sun50i-h618-orangepi-zero3.dtb
+rootdev=/dev/mmcblk0p2
+extraargs=video=HDMI-A-1:edid cma=192M drm.debug=0x1e quiet splash loglevel=3 plymouth.ignore-serial-consoles plymouth.ignore-udev vt.global_cursor_default=0
+bootargs=console=ttyS0,115200 console=tty1 root=/dev/mmcblk0p2 rootwait rw video=HDMI-A-1:edid cma=192M drm.debug=0x1e quiet splash loglevel=3 plymouth.ignore-serial-consoles plymouth.ignore-udev vt.global_cursor_default=0
 EOF
 
 echo "==> Membuat partisi BOOT (FAT32) dengan mformat & mcopy..."
