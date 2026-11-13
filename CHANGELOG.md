@@ -1,5 +1,24 @@
 # CHANGELOG
 
+## [2026-11-13] Optimalisasi Proporsi Modal Pengaturan (Lebih Ramping & Ringkas)
+- Apa yang diubah:
+  - **Pengecilan Dimensi Modal Dialog**:
+    - Mengurangi lebar modal dari 85%-96% (1000px-1150px) menjadi proporsional di ~74% lebar layar (maksimal 900px pada 1280x720).
+    - Mengurangi tinggi modal dari 82%-94% (570px-680px) menjadi ~72% tinggi layar (maksimal 510px pada 1280x720).
+    - Memberikan margin keliling yang proporsional dan elegan sehingga modal tampak sebagai dialog melayang (*floating dialog*) yang rapi tanpa menutupi seluruh layar TV.
+  - **Perampingan Komponen Panel Navigasi Kiri (Navigation Rail)**:
+    - Mengurangi lebar rail navigasi dari 260px ke 185-210px (`std::clamp(modalW * 0.22f, 185.0f, 210.0f)`).
+    - Mengurangi tinggi tombol tab navigasi dari 34px menjadi 25px dengan padding vertikal lebih ringkas (3px) dan spacing (2px).
+    - Mengurangi tinggi tombol aksi: `[💾 SIMPAN & KELUAR]` (28px), `[✖ BATAL (ESC)]` (23px), `[🔄 Restart]` & `[⏻ Matikan]` (23px).
+    - Meringkas teks petunjuk navigasi menjadi satu baris: `▲▼:Nav | OK:Pilih | ESC:Out`.
+    - Semua 12 tab dan tombol aksi kini muat dalam tinggi modal tanpa perlu scrollbar di panel navigasi.
+  - Mengompilasi ulang binary ARM64 `jadwalsholat_imgui_opi`, menginjeksi ke `build/rootfs.img`, dan merakit ulang image `output/orangepi_zero3_jws.img`.
+- Alasan: Memenuhi keluhan pengguna bahwa ukuran modal pengaturan sebelumnya terlalu besar (*"ukuranya terlau gede"*).
+- File/komponen terdampak: `CPP_PROGRAM/src/SettingsModal.cpp`, `overlay/opt/jws/jadwalsholat_imgui`, `build/rootfs.img`, `output/orangepi_zero3_jws.img`, `CHANGELOG.md`.
+- Hasil uji: Dimensi modal lebih proporsional, teks dan tombol rapi dan nyaman dilihat di TV, seluruh tombol aksi pas di layar.
+- Commit / tag: `fix(ui): buat ukuran modal pengaturan lebih ramping, ringkas, dan proporsional`
+
+
 ## [2026-11-13] Restrukturisasi Ergonomis Modal Pengaturan (Hapus Footer Bar & Navigasi Remot Terpadu)
 - Apa yang diubah:
   - **Penghapusan Baris Footer Bawah yang Tidak Terjangkau Remot**:
