@@ -1,5 +1,23 @@
 # CHANGELOG
 
+## [2026-11-13] Pembersihan Total Emoji/Unicode & Perbaikan Teks Tombol Terpotong
+- Apa yang diubah:
+  - **Pembersihan Total Karakter Emoji & Unicode Non-ASCII**:
+    - Menghapus semua karakter emoji dan simbol unicode dari label tombol, header, dan teks status pada `SettingsModal.cpp` dan `TVSidebar.cpp` (seperti `💾`, `✖`, `🔄`, `⏻`, `▶`, `◄`, `›`, `💡`, `▲▼`, `👁️`, `⏱️`, `⏹️`, `🕌`, `●`, dll.).
+    - Semua teks tombol dan status kini menggunakan karakter ASCII standar yang bersih (misal: `SIMPAN & KELUAR`, `BATAL (ESC)`, `Restart`, `Shutdown`, `KONTROL DAYA`, `> Tab`), sehingga terhindar 100% dari karakter tanda tanya rusak (`[?]` atau `?`).
+  - **Solusi Teks Tombol Terpotong (Settings Modal & TV Sidebar)**:
+    - Memperlebar rail navigasi kiri `SettingsNavRail` menjadi 220–240px (`std::clamp(modalW * 0.25f, 220.0f, 240.0f)`).
+    - Menambah tinggi modal menjadi 560px (`std::min(560.0f, windowHeight * 0.80f)`), memberikan ruang vertikal lega sehingga tombol `Restart`, `Shutdown`, dan teks petunjuk di bagian bawah tidak terpotong tepi jendela.
+    - Menghapus flag `ImGuiWindowFlags_NoScrollbar` pada rail navigasi kiri agar konten tidak pernah terpotong secara permanen jika dijalankan pada resolusi layar yang lebih kecil.
+    - Menata tombol `Restart` dan `Shutdown` berdampingan dengan frame padding khusus (`2.0f, 3.0f`) dan lebar tombol ~105px sehingga teks muat penuh tanpa terpotong.
+    - Di `TVSidebar`, teks `[⏻] KONTROL DAYA PERANGKAT` disederhanakan menjadi `KONTROL DAYA`, tombol `🔄 RESTART` / `⏻ SHUTDOWN` menjadi `RESTART` / `SHUTDOWN`, dan `💾 TERAPKAN & SIMPAN (APPLY)` menjadi `SIMPAN & KELUAR`.
+  - Mengompilasi ulang binary ARM64 `jadwalsholat_imgui_opi`, menginjeksi ke `build/rootfs.img`, dan merakit ulang image `output/orangepi_zero3_jws.img`.
+- Alasan: Memenuhi keluhan pengguna bahwa emoji/unicode tidak perlu karena muncul rusak, tombol restart/shutdown terpotong, dan ada teks lain yang terpotong.
+- File/komponen terdampak: `CPP_PROGRAM/src/SettingsModal.cpp`, `CPP_PROGRAM/src/TVSidebar.cpp`, `overlay/opt/jws/jadwalsholat_imgui`, `build/rootfs.img`, `output/orangepi_zero3_jws.img`, `CHANGELOG.md`.
+- Hasil uji: Bebas karakter rusak `[?]`, tombol Restart & Shutdown tampil penuh dan rapi, seluruh teks tombol terbaca utuh.
+- Commit / tag: `fix(ui): bersihkan seluruh emoji unicode dan atasi teks tombol terpotong`
+
+
 ## [2026-11-13] Optimalisasi Proporsi Modal Pengaturan (Lebih Ramping & Ringkas)
 - Apa yang diubah:
   - **Pengecilan Dimensi Modal Dialog**:
