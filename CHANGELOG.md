@@ -1,5 +1,22 @@
 # CHANGELOG
 
+## [2026-11-13] Eliminasi Strip Pembatas Kaku: Desain Kartu Seamless Rounded Border
+- Apa yang diubah:
+  - **Menghilangkan Strip Warna Atas yang Memotong Garis Kartu**:
+    - Menghapus strip balok warna tipis 4px di atas setiap kartu yang sebelumnya terlihat menabrak batas lengkungan (*border radius*) dan tampak seperti memotong/keluar batas kartu.
+    - Menggantinya dengan **Seamless Continuous Rounded Border (14px)** yang membingkai kartu secara utuh, rapi, dan simetris tanpa ada elemen yang keluar garis.
+  - **Tata Letak Konten Bernapas & Tipografi Bersih**:
+    - Memberikan jarak aman (*top padding*) 12px di bagian atas kartu sehingga nama sholat melayang bebas secara proporsional.
+    - Menghapus garis pemisah kaku horizontal di tengah agar tampilan lebih lapang (*clean & airy*).
+    - Membesarkan angka jam sholat menjadi 30px tebal dengan kontras warna putih murni.
+  - **Pill Badge Status Mengambang (*Floating Status Pill*)**:
+    - Mempertahankan pill badge solid gold `[ ● AKTIF ]` dan royal cyan hitung mundur `-hh:mm:ss` dengan padding bawah 8px yang simetris dan rapi.
+  - Memperbarui biner aplikasi di `overlay/opt/jws/jadwalsholat_imgui`, menyuntikkannya ke `build/rootfs.img`, dan merakit ulang image `output/orangepi_zero3_jws.img`.
+- Alasan: Menjawab keluhan pengguna bahwa bagian atas kartu tampak seperti melewati batas / terpotong garisnya.
+- File/komponen terdampak: `CPP_PROGRAM/src/MainDashboard.cpp`, `overlay/opt/jws/jadwalsholat_imgui`, `build/rootfs.img`, `output/orangepi_zero3_jws.img`, `CHANGELOG.md`.
+- Hasil uji: Kompilasi sukses, image OS 3.0GB diperbarui, diverifikasi via tangkapan layar QEMU bahwa kartu tampil 100% rapi di dalam batas kontainer dengan sudut membulat sempurna.
+- Commit / tag: `style(dashboard): hilangkan strip atas kaku, buat kartu rounded border seamless dan bersih`
+
 ## [2026-11-13] Modernisasi Desain Kartu Jadwal Sholat: Frosted Glass & Pill Badges Elegan
 - Apa yang diubah:
   - **Desain Permukaan Kartu Modern (Frosted Dark Glass)**:
