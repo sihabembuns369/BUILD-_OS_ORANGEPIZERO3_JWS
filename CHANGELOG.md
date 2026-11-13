@@ -1,5 +1,20 @@
 # CHANGELOG
 
+## [2026-11-13] Sinkronisasi Jam NTP Akurat, Timezone Deterministik (WIB) & Script Deploy Windows
+- Apa yang diubah:
+  - **Sinkronisasi Jam Internet & Timezone Deterministik (WIB / GMT+7)**:
+    - Memperbaiki selisih 7 jam waktu sistem: mengonfigurasi rootfs Debian dengan zona waktu `Asia/Jakarta` (`/etc/timezone` dan symlink `/etc/localtime` -> `/usr/share/zoneinfo/Asia/Jakarta`).
+    - Menambahkan `TimeManager::ApplySystemTimezone` dan kalkulasi waktu lokal deterministik `TimeManager::GetLocalTm(utcTime, timezone)` berbasis aritmatika jam (`utcTime + timezone * 3600`) dan `gmtime_r`, menjamin waktu aplikasi 100% konsisten ke WIB tanpa terpengaruh anomali timezone OS.
+    - Sinkronisasi NTP langsung menyelaraskan jam sistem (`settimeofday` & `date -u`) serta menulis waktu ke chip hardware RTC eksternal DS3231 (`hwclock -w -f /dev/rtc1 || hwclock -w`).
+    - Input manual waktu di Settings Modal kini otomatis menggunakan waktu lokal sesuai zona waktu terpilih dan langsung memperbarui jam sistem serta RTC.
+  - **Script Deploy Otomatis ke Windows**:
+    - Menambahkan script `deploy_to_windows.sh` untuk menyalin image `output/orangepi_zero3_jws.img` (3.2 GB) secara otomatis ke folder Windows: `C:\Users\embun\Documents\ARMBIAN\JWS_NEW_VERSION\`.
+    - Menyertakan progress bar visual via `rsync` dan panduan flashing Balena Etcher `CARA_BURN_BALENA_ETCHER.txt` di folder tujuan Windows.
+- Alasan: Mengatasi kendala jam aplikasi yang terpaut 7 jam (berjalan di UTC) saat sinkronisasi NTP, dan mempermudah proses flashing image ke MicroSD via Balena Etcher dari sistem Windows.
+- File/komponen terdampak: `deploy_to_windows.sh`, `overlay/etc/timezone`, `overlay/etc/localtime`, `overlay/opt/jws/jadwalsholat_imgui`, `build/rootfs.img`, `output/orangepi_zero3_jws.img`, `CHANGELOG.md`.
+- Hasil uji: Image disk berhasil dirakit dan disalin ke `C:\Users\embun\Documents\ARMBIAN\JWS_NEW_VERSION\orangepi_zero3_jws.img` dengan ukuran 3.2 GB, siap di-burn langsung dengan Balena Etcher.
+- Commit / tag: `feat(deploy): tambah script deploy ke windows dan perbaiki timezone ntp rootfs`
+
 ## [2026-11-13] Eliminasi Strip Pembatas Kaku: Desain Kartu Seamless Rounded Border
 - Apa yang diubah:
   - **Menghilangkan Strip Warna Atas yang Memotong Garis Kartu**:
