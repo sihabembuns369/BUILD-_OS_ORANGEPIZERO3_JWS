@@ -35,23 +35,36 @@ fi
 
 # 3. Salin File Image dengan Progress Bar
 echo ""
-echo "⏳ Memulai penyalinan image ke Windows (mohon tunggu)..."
+echo "⏳ Memulai penyalinan image mentah ke Windows (mohon tunggu)..."
 rsync -ah --progress "${SOURCE_IMG}" "${DEST_WIN_DIR}/orangepi_zero3_jws.img"
 
-# 4. Buat File Panduan Burning Balena Etcher di Windows
+# 4. Buat File Kompresi .zip Ringan (~450MB) untuk Balena Etcher
+echo ""
+echo "📦 Mengompres image menjadi format .zip super ringan untuk Balena Etcher..."
+(cd "${SCRIPT_DIR}/output" && zip -q -1 "${DEST_WIN_DIR}/orangepi_zero3_jws.zip" "orangepi_zero3_jws.img") || true
+if [ -f "${DEST_WIN_DIR}/orangepi_zero3_jws.zip" ]; then
+    ZIP_SIZE=$(du -h "${DEST_WIN_DIR}/orangepi_zero3_jws.zip" | cut -f1)
+    echo "✅ Berhasil membuat file zip ringan: ${ZIP_SIZE}"
+fi
+
+# 5. Buat File Panduan Burning Balena Etcher di Windows
 cat << 'EOF' > "${DEST_WIN_DIR}/CARA_BURN_BALENA_ETCHER.txt"
 ================================================================================
 PANDUAN FLASHING / BURNING IMAGE OS ORANGE PI ZERO 3 (JWS)
 ================================================================================
 
+Tersedia 2 pilihan file image (pilih salah satu di Balena Etcher):
+A. orangepi_zero3_jws.zip  -> File kompresi super ringan (~500MB), flash lebih cepat!
+B. orangepi_zero3_jws.img  -> File mentah image (3.0GB).
+
+Langkah Flashing:
 1. Buka aplikasi Balena Etcher di Windows.
 2. Klik tombol "Flash from file".
-3. Pilih file image:
-   orangepi_zero3_jws.img
-   (Lokasi: C:\Users\embun\Documents\ARMBIAN\JWS_NEW_VERSION\orangepi_zero3_jws.img)
-4. Klik "Select target" -> Pilih MicroSD Card Anda (rekomendasi Class 10 / U3, minimal 8GB).
-5. Klik "Flash!" dan tunggu sampai proses flashing serta verifikasi selesai.
-6. Masukkan MicroSD ke slot Orange Pi Zero 3:
+3. Pilih salah satu file di atas (misal: orangepi_zero3_jws.zip).
+   *Catatan: Balena Etcher bisa langsung burn file .zip tanpa perlu diekstrak!
+4. Klik "Select target" -> Pilih MicroSD Card Anda (minimal 4GB / 8GB).
+5. Klik "Flash!" dan tunggu sampai proses selesai.
+6. Masukkan MicroSD ke Orange Pi Zero 3:
    - Hubungkan kabel HDMI ke TV/Monitor.
    - Hubungkan adaptor daya USB Type-C (5V 3A disarankan).
    - Layar akan langsung menampilkan boot splash animasi/gambar dan aplikasi
@@ -67,6 +80,13 @@ EOF
 echo ""
 echo "============================================================"
 echo "✅ BERHASIL DI-DEPLOY KE WINDOWS!"
+echo "============================================================"
+echo "Lokasi File di Windows:"
+echo "👉 C:\\Users\\embun\\Documents\\ARMBIAN\\JWS_NEW_VERSION\\orangepi_zero3_jws.zip (Ringan ~500MB)"
+echo "👉 C:\\Users\\embun\\Documents\\ARMBIAN\\JWS_NEW_VERSION\\orangepi_zero3_jws.img (Mentah 3.0GB)"
+echo "👉 C:\\Users\\embun\\Documents\\ARMBIAN\\JWS_NEW_VERSION\\CARA_BURN_BALENA_ETCHER.txt"
+echo ""
+echo "Tips: Anda bisa langsung memilih file .zip di Balena Etcher tanpa perlu ekstrak!"
 echo "============================================================"
 echo "Lokasi File di Windows:"
 echo "👉 C:\\Users\\embun\\Documents\\ARMBIAN\\JWS_NEW_VERSION\\orangepi_zero3_jws.img"
