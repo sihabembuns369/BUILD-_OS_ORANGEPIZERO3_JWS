@@ -1,5 +1,31 @@
 # CHANGELOG
 
+## [2026-11-13] Modernisasi Desain Kartu Jadwal Sholat: Frosted Glass & Pill Badges Elegan
+- Apa yang diubah:
+  - **Desain Permukaan Kartu Modern (Frosted Dark Glass)**:
+    - Meningkatkan kehalusan sudut kartu (`cardRounding = 14px`) untuk kesan rounded modern ala Smart TV premium.
+    - Mengganti latar belakang blok gelap statis dengan permukaan kaca frosted gelap transparan (`IM_COL32(12, 22, 17, 230)`) yang membaur mulus di atas foto Ka'bah/Masjid slideshow.
+    - Menghilangkan garis strip bawah patah/kaku (`_`) yang sebelumnya terlihat seperti garis terpotong di bawah kartu.
+  - **Pill Badge Status Elegan & Modern**:
+    - **Kartu Aktif (Waktu Sholat Saat Ini)**:
+      - Menggunakan latar belakang hijau zamrud hangat dengan pendar cahaya emas di bagian atas.
+      - Double-border berpendar emas murni (`IM_COL32(255, 225, 90, 255)`).
+      - Menghadirkan pill badge solid gold `[ ● AKTIF ]` berbentuk kapsul bundar simetris dengan indikator titik hijau aktif dan tipografi gelap kontras tinggi.
+    - **Kartu Berikutnya (Hitung Mundur Sholat)**:
+      - Menggunakan latar belakang biru safir elegan dengan pendar cyan langit.
+      - Double-border berpendar cyan langit (`IM_COL32(56, 189, 248, 230)`).
+      - Menghadirkan pill badge kapsul royal cyan berisi hitung mundur digital `-hh:mm:ss` dengan tipografi putih tebal yang sangat jelas.
+    - **Kartu Sholat Normal & Telah Lewat**:
+      - Setiap kartu memiliki strip warna identitas waktu langit (Imsak ungu, Shubuh biru fajar, Syuruq emas fajar, Dhuha kuning mentari, Dzuhur zamrud, Ashar oranye, Maghrib ruby senja, Isya indigo malam).
+      - Waktu sholat yang telah dilewati hari ini diberi tanda pill halus minimalis `LEWAT`.
+      - Waktu sholat mendatang memiliki ornamen titik aksen identitas waktu langit di tengah pill bawah.
+    - Menambahkan garis pemisah halus (hairline divider) antara nama sholat dan angka jam sholat.
+  - Memperbarui biner aplikasi di `overlay/opt/jws/jadwalsholat_imgui`, menyuntikkannya ke `build/rootfs.img`, dan merakit ulang image `output/orangepi_zero3_jws.img`.
+- Alasan: Menjawab permintaan pengguna untuk memperbaiki bagian kartu jadwal sholat yang dikotak merah agar tampak modern, cantik, dan elegan.
+- File/komponen terdampak: `CPP_PROGRAM/src/MainDashboard.cpp`, `overlay/opt/jws/jadwalsholat_imgui`, `build/rootfs.img`, `output/orangepi_zero3_jws.img`, `CHANGELOG.md`.
+- Hasil uji: Biner sukses dikompilasi (x86_64 dan aarch64), image OS 3.0GB berhasil dirakit, teruji visual via screendump QEMU dengan kartu sholat modern bernuansa frosted glass dan pill badge simetris.
+- Commit / tag: `style(dashboard): modernisasi kartu jadwal sholat dengan frosted glass dan pill badge elegan`
+
 ## [2026-11-13] Navigasi Otomatis D-Pad TV, Tombol Stepper Combo, dan Fokus Tombol LIHAT/BERSIHKAN
 - Apa yang diubah:
   - **Navigasi Tombol LIHAT & BERSIHKAN di Virtual Keyboard**:
