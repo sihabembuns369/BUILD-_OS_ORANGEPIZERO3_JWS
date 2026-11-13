@@ -1,5 +1,21 @@
 # CHANGELOG
 
+## [2026-11-13] Penyesuaian Font Tombol Navigasi (Anti-Kegedean & Anti-Potong)
+- Apa yang diubah:
+  - **Penyesuaian Font Tombol Navigasi Modal (`navItemFont`)**:
+    - Mengganti font tombol tab navigasi aktif dari `fontBold` (26px yang kebesaran/kegedean) menjadi font proporsional `fontSmall` (15px).
+    - Menghilangkan pemotongan teks pada tab aktif yang panjang seperti `> Keamanan Admin` (yang sebelumnya terpotong menjadi `> Keamanan Adn`).
+    - Mengganti font tombol aksi `[SIMPAN & KELUAR]` dan `[BATAL (ESC)]` dari `fontBold` (26px) menjadi `fontSmall` (15px), sehingga teks `SIMPAN & KELUAR` muat utuh dengan margin lega tanpa terpotong huruf 'R' di ujung kanan tombol.
+    - Menyesuaikan font tombol `Restart` dan `Shutdown` menjadi `navItemFont` agar ukuran teks seragam, rapi, dan proporsional.
+  - **Pelebaran Rail Navigasi Kiri**:
+    - Meningkatkan batas lebar panel navigasi kiri menjadi 230–255px (`std::clamp(modalW * 0.27f, 230.0f, 255.0f)`), memberikan ruang horizontal ekstra bagi teks menu.
+  - Mengompilasi ulang biner ARM64 `jadwalsholat_imgui_opi`, menginjeksi ke `build/rootfs.img`, dan merakit ulang image `output/orangepi_zero3_jws.img`.
+- Alasan: Memenuhi masukan pengguna bahwa teks tombol masih kebesaran (*"masih ada beberapa nih yang kegeden"*) sehingga memotong teks `Keamanan Admin` dan `SIMPAN & KELUAR`.
+- File/komponen terdampak: `CPP_PROGRAM/src/SettingsModal.cpp`, `overlay/opt/jws/jadwalsholat_imgui`, `build/rootfs.img`, `output/orangepi_zero3_jws.img`, `CHANGELOG.md`.
+- Hasil uji: Teks `> Keamanan Admin` dan `SIMPAN & KELUAR` tampil 100% utuh tanpa terpotong satu huruf pun.
+- Commit / tag: `fix(ui): sesuaikan ukuran font navigasi agar teks tab dan simpan tidak terpotong`
+
+
 ## [2026-11-13] Pembersihan Total Emoji/Unicode & Perbaikan Teks Tombol Terpotong
 - Apa yang diubah:
   - **Pembersihan Total Karakter Emoji & Unicode Non-ASCII**:
