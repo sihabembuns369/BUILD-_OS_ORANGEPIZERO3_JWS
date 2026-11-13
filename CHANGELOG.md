@@ -1,5 +1,25 @@
 # CHANGELOG
 
+## [2026-11-13] Integrasi Otomatis RTC Eksternal DS3231 (I2C) & Pembaruan AGENTS.md
+- Apa yang diubah:
+  - **Pembaruan Dokumen AGENTS.md**:
+    - Menambahkan spesifikasi modul RTC eksternal I2C **DS3231** (`rtc-ds1307` / `rtc-ds3232`) pada tabel Spesifikasi Teknis, Kebutuhan Hardware, dan Kriteria Lulus Uji.
+    - Menambahkan panduan komprehensif pinout header 26-pin Orange Pi Zero 3 (Pin 1: 3.3V, Pin 3: I2C3_SDA, Pin 5: I2C3_SCL, Pin 6: GND).
+  - **Layanan Sinkronisasi Dua Arah Otomatis (`rtc-sync` & `rtc-ds3231.service`)**:
+    - Membuat skrip `/usr/local/bin/rtc-sync` dan service systemd `rtc-ds3231.service` (aktif saat `sysinit.target`).
+    - **Saat Booting**: Otomatis menginstansiasi perangkat `ds3231 0x68` pada bus I2C-3 dan mengeksekusi `hwclock --hctosys -f /dev/rtc1` sehingga jam jadwal sholat langsung presisi tanpa memerlukan koneksi internet.
+    - **Saat Shutdown / Reboot**: Otomatis mengeksekusi `hwclock --systohc -f /dev/rtc1` untuk menyimpan waktu sistem terakhir ke modul RTC berdaya baterai CR2032.
+  - **Integrasi di Aplikasi Jadwal Sholat**:
+    - Menambahkan eksekusi `hwclock -w -f /dev/rtc1` pada `TimeManager::SetManualTime` di aplikasi JWS setiap kali admin mengubah waktu manual atau sinkron internet, sehingga RTC hardware langsung terupdate.
+  - **Konfigurasi Headless di `/boot/system.conf`**:
+    - Menambahkan opsi `RTC_ENABLED=yes`, `RTC_I2C_BUS=3`, `RTC_I2C_ADDR=0x68`, `RTC_TYPE=ds3231` pada `/boot/system.conf.example`.
+  - Mengompilasi ulang biner ARM64, menginjeksi ke `build/rootfs.img`, dan merakit ulang image `output/orangepi_zero3_jws.img`.
+- Alasan: Memenuhi kebutuhan pengguna agar waktu sistem (datetime) jadwal sholat tersimpan aman dan akurat pada modul RTC eksternal DS3231 saat perangkat offline tanpa internet.
+- File/komponen terdampak: `AGENTS.md`, `HowTo.md`, `README.md`, `configs/system.conf.example`, `overlay/usr/local/bin/rtc-sync`, `overlay/etc/systemd/system/rtc-ds3231.service`, `overlay/opt/jws/jadwalsholat_imgui`, `build/rootfs.img`, `output/orangepi_zero3_jws.img`, `CHANGELOG.md`.
+- Hasil uji: Konfigurasi RTC terdaftar di systemd, sinkronisasi dua arah aktif, dan dokumentasi lengkap di repo.
+- Commit / tag: `feat(rtc): integrasi modul rtc i2c ds3231 dan dokumentasi agents.md`
+
+
 ## [2026-11-13] Penyesuaian Font Tombol Navigasi (Anti-Kegedean & Anti-Potong)
 - Apa yang diubah:
   - **Penyesuaian Font Tombol Navigasi Modal (`navItemFont`)**:

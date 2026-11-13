@@ -200,3 +200,10 @@ Fitur yang perlu diverifikasi pada board nyata:
 - [ ] **GPIO Infra Red (IR)**: Uji sensor receiver VS1838B menggunakan `ir-keytable -t` atau `evtest /dev/input/eventX`.
 - [ ] **Audio ALSA**: Uji output audio analog atau HDMI menggunakan `aplay -l` dan `speaker-test -t sine -f 1000`.
 - [ ] **WiFi & Bluetooth Onboard**: Verifikasi modul wireless (CDW-20U5622 / UniSoC / RTL8821CS) dengan `nmcli device wifi list` atau `iwlist wlan0 scan`.
+- [ ] **RTC Eksternal I2C (DS3231)**:
+  - Hubungkan modul DS3231 ke header 26-pin: Pin 1 (3.3V), Pin 3 (SDA/I2C3), Pin 5 (SCL/I2C3), Pin 6 (GND).
+  - Cek deteksi I2C: `i2cdetect -y 3` (alamat 0x68 muncul `68` atau `UU`).
+  - Cek waktu RTC: `hwclock -r -f /dev/rtc1`.
+  - Uji simpan waktu sistem ke RTC: `hwclock -w -f /dev/rtc1`.
+  - Matikan daya, tunggu beberapa menit (tanpa internet), nyalakan kembali, dan pastikan jam langsung akurat.
+

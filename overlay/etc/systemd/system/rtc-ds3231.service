@@ -1,0 +1,16 @@
+[Unit]
+Description=Real Time Clock DS3231 (I2C) Synchronization Service
+DefaultDependencies=no
+After=systemd-modules-load.service local-fs.target
+Before=sysinit.target shutdown.target time-sync.target
+Conflicts=shutdown.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/bin/rtc-sync start
+ExecStop=/usr/local/bin/rtc-sync stop
+TimeoutSec=10
+
+[Install]
+WantedBy=sysinit.target

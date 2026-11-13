@@ -27,6 +27,7 @@ Distribusi Linux Debian minimalis berbasis arm64 yang teroptimasi untuk **Orange
    - Audio ALSA aktif untuk azan dan alarm salat.
    - Driver & firmware WiFi/Bluetooth on-board aktif saat boot.
    - Driver DRM/KMS Allwinner sun4i dan Panfrost Mali G31 MP2 aktif.
+   - **RTC Eksternal (DS3231 I2C)**: Sinkronisasi waktu otomatis dua arah (`hwclock -s` saat boot, `hwclock -w` saat shutdown) di alamat `0x68` (Pin 3 SDA & Pin 5 SCL), menjaga jadwal sholat tetap akurat tanpa internet.
 
 ---
 

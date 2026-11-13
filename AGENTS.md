@@ -26,6 +26,7 @@ Bangun image sistem operasi Linux berbasis **Debian minimalis** untuk **Orange P
 | Autostart   | Aplikasi jadwal salat berjalan otomatis saat boot (systemd service), restart otomatis jika crash |
 | Konsol      | UART debug (`ttyS0`, 115200 8N1) untuk **seluruh teks booting**, HDMI (`tty1`) **khusus grafis animasi/gambar** |
 | Remote      | OpenSSH server aktif saat boot |
+| 🆕 RTC Eksternal | Modul I2C DS3231 (`rtc-ds1307` / `rtc-ds3232` di bus I2C, alamat `0x68`). Otomatis sinkronisasi waktu dua arah (`hwclock -s` saat boot, `hwclock -w` saat shutdown/ganti jam) |
 
 # 🆕 SPLASH SCREEN: GAMBAR / ANIMASI / GIF (dinamis via config)
 ## Perilaku
@@ -132,6 +133,46 @@ SERIAL_BAUD=115200
 5. **Display (HDMI)**: driver DRM/KMS aktif agar splash (termasuk animasi) dan aplikasi tampil.
 6. **UART debug**: UART0 aktif sebagai konsol serial (`ttyS0`) di device tree.
 7. **Ethernet**: driver aktif untuk akses SSH lewat kabel.
+8. 🆕 **RTC Eksternal (DS3231 via I2C)**: Driver kernel `rtc-ds1307` / `rtc-ds3232` aktif, instansiasi modul alamat `0x68` pada bus I2C (header Pin 3 SDA & Pin 5 SCL), sinkronisasi otomatis waktu sistem dari RTC saat boot (`hwclock -s`) dan penyimpanan waktu ke RTC saat shutdown/ubah jam (`hwclock -w`), sehingga jadwal sholat selalu presisi saat offline tanpa internet.
+
+# 🆕 INTEGRASI RTC EKSTERNAL: DS3231 (I2C)
+## Tujuan & Perilaku
+- Jam jadwal sholat **wajib langsung presisi** sejak detik pertama boot meskipun tanpa koneksi internet (masjid tanpa WiFi/Ethernet atau saat listrik padam lalu hidup kembali).
+- Menggunakan modul Real Time Clock presisi tinggi **DS3231** (kompensasi suhu TCXO + baterai backup CR2032/LIR2032).
+- Modul terhubung ke bus I2C Orange Pi Zero 3 pada alamat `0x68`.
+
+## Koneksi Pin Fisik (Header GPIO 26-Pin Orange Pi Zero 3)
+| Pin Modul DS3231 | Pin Header Orange Pi Zero 3 | Fungsi |
+|------------------|-----------------------------|--------|
+| **VCC**          | **Pin 1** (3.3V)            | Daya modul (gunakan 3.3V aman untuk baterai CR2032 standar) |
+| **GND**          | **Pin 6** (GND)             | Ground (bisa juga Pin 9, 14, 20, 25) |
+| **SDA**          | **Pin 3** (I2C3_SDA / PI6)  | Jalur data I2C (I2C bus 3) |
+| **SCL**          | **Pin 5** (I2C3_SCL / PI5)  | Jalur clock I2C (I2C bus 3) |
+
+## Arsitektur & Mekanisme di Linux
+1. **Modul Kernel**:
+   - `i2c-dev`: Antarmuka userspace I2C.
+   - `rtc-ds1307` atau `rtc-ds3232`: Driver RTC Dallas/Maxim DS3231.
+2. **Instansiasi Otomatis I2C**:
+   - Skrip `system-apply` / service systemd memeriksa kehadiran bus `i2c-3`.
+   - Menginstansiasi perangkat ke kernel:
+     ```bash
+     echo ds3231 0x68 > /sys/class/i2c-adapter/i2c-3/new_device 2>/dev/null || true
+     ```
+   - Kernel otomatis membuat device node `/dev/rtc1`.
+3. **Sinkronisasi Dua Arah (Otomatis)**:
+   - **Saat Booting (RTC -> Jam Sistem Linux)**:
+     - Sistem menjalankan: `hwclock --hctosys -f /dev/rtc1 2>/dev/null || hwclock -s`
+     - Jam Linux langsung sinkron dengan waktu akurat dari baterai DS3231 sebelum aplikasi jadwal sholat dimulai.
+   - **Saat Shutdown / Reboot (Jam Sistem Linux -> RTC)**:
+     - Systemd saat stop service menjalankan: `hwclock --systohc -f /dev/rtc1 2>/dev/null || hwclock -w`
+     - Waktu terakhir disimpan ke chip DS3231.
+   - **Saat Jam Diatur Manual / Sinkron Internet (NTP)**:
+     - Aplikasi memicu `hwclock -w -f /dev/rtc1` sehingga chip RTC selalu menyimpan waktu terbaru yang valid.
+4. **Perintah Diagnostik & Pengujian**:
+   - Cek deteksi modul di bus I2C: `i2cdetect -y 3` (alamat `0x68` akan muncul `68` atau `UU` jika driver aktif).
+   - Baca waktu dari modul RTC: `hwclock -r -f /dev/rtc1`
+   - Tulis waktu sistem saat ini ke RTC: `hwclock -w -f /dev/rtc1`
 
 # REFERENSI
 - Panduan build: baca `HowTo.md` terlebih dahulu. Jika ada langkah yang kurang atau salah, perbarui `HowTo.md`.
@@ -191,6 +232,7 @@ SERIAL_BAUD=115200
 - [ ] Image boot sampai login/desktop di QEMU tanpa kernel panic
 - [ ] Service aplikasi jadwal salat aktif otomatis (`systemctl status` = active)
 - [ ] Layanan audio, WiFi, Bluetooth, dan IR terdaftar dan terkonfigurasi
+- [ ] 🆕 Modul RTC I2C DS3231 terkonfigurasi untuk sinkronisasi dua arah (`hwclock -s` saat boot, `hwclock -w` saat shutdown)
 - [ ] 🆕 Splash teruji minimal 5 variasi: (1) `MODE=image`, (2) `MODE=frames`, (3) `MODE=gif`, (4) `ENABLED=no`, (5) warna/skala/posisi berbeda
 - [ ] 🆕 Ganti GIF di `/boot/splash/` lalu reboot: animasi baru tampil; reboot berikutnya memakai cache tanpa konversi ulang
 - [ ] 🆕 `LOOP=yes` dan `LOOP=no` berperilaku benar; `FPS` mengubah kecepatan

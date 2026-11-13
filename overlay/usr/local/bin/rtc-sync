@@ -1,0 +1,74 @@
+#!/usr/bin/env bash
+# /usr/local/bin/rtc-sync
+# Sinkronisasi dua arah modul RTC DS3231 (I2C) Orange Pi Zero 3
+
+set -e
+
+SYS_CONF="/boot/system.conf"
+RTC_ENABLED="yes"
+RTC_I2C_BUS="3"
+RTC_I2C_ADDR="0x68"
+RTC_TYPE="ds3231"
+
+if [ -f "$SYS_CONF" ]; then
+    eval "$(grep -E '^RTC_[A-Z_]+=' "$SYS_CONF" | sed 's/\r$//')"
+fi
+
+if [ "${RTC_ENABLED,,}" != "yes" ]; then
+    exit 0
+fi
+
+find_rtc() {
+    for rtc in /sys/class/rtc/rtc*; do
+        if [ -e "$rtc/device/name" ]; then
+            RNAME=$(cat "$rtc/device/name" 2>/dev/null || true)
+            if [[ "$RNAME" =~ ds3231|ds1307|ds3232 ]]; then
+                echo "/dev/$(basename "$rtc")"
+                return 0
+            fi
+        fi
+    done
+    [ -e "/dev/rtc1" ] && echo "/dev/rtc1" && return 0
+    [ -e "/dev/rtc0" ] && echo "/dev/rtc0" && return 0
+    return 1
+}
+
+case "$1" in
+    start)
+        modprobe i2c-dev 2>/dev/null || true
+        modprobe rtc-ds1307 2>/dev/null || modprobe rtc-ds3232 2>/dev/null || true
+        
+        ADAPTER_DIR="/sys/class/i2c-adapter/i2c-${RTC_I2C_BUS}"
+        if [ -d "$ADAPTER_DIR" ]; then
+            DEV_NAME=$(echo "$RTC_I2C_ADDR" | sed 's/0x//' | tr '[:upper:]' '[:lower:]')
+            if [ ! -d "${ADAPTER_DIR}/${RTC_I2C_BUS}-00${DEV_NAME}" ]; then
+                echo "$RTC_TYPE $RTC_I2C_ADDR" > "${ADAPTER_DIR}/new_device" 2>/dev/null || true
+                sleep 0.1
+            fi
+        fi
+        
+        DEV_RTC=$(find_rtc || true)
+        if [ -n "$DEV_RTC" ] && [ -e "$DEV_RTC" ]; then
+            echo "[rtc-sync] Menyinkronkan jam Linux dari RTC ($DEV_RTC)..."
+            hwclock --hctosys -f "$DEV_RTC" 2>/dev/null || true
+            echo "[rtc-sync] Waktu sistem saat ini: $(date)"
+        fi
+        ;;
+    stop)
+        DEV_RTC=$(find_rtc || true)
+        if [ -n "$DEV_RTC" ] && [ -e "$DEV_RTC" ]; then
+            echo "[rtc-sync] Menyimpan jam sistem Linux ke RTC ($DEV_RTC)..."
+            hwclock --systohc -f "$DEV_RTC" 2>/dev/null || true
+        fi
+        ;;
+    save)
+        DEV_RTC=$(find_rtc || true)
+        if [ -n "$DEV_RTC" ] && [ -e "$DEV_RTC" ]; then
+            hwclock --systohc -f "$DEV_RTC" 2>/dev/null || true
+        fi
+        ;;
+    *)
+        echo "Usage: $0 {start|stop|save}"
+        exit 1
+        ;;
+esac

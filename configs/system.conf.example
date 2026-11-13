@@ -6,3 +6,9 @@ SSH_PORT=22
 SSH_PASSWORD_AUTH=yes        # yes/no (default yes untuk first boot)
 SERIAL_CONSOLE=yes           # yes/no
 SERIAL_BAUD=115200
+
+# Modul Real Time Clock (RTC) Eksternal I2C (DS3231)
+RTC_ENABLED=yes              # yes/no (aktifkan modul RTC eksternal)
+RTC_I2C_BUS=3                # nomor bus I2C (3 untuk Pin 3 SDA & Pin 5 SCL pada Orange Pi Zero 3)
+RTC_I2C_ADDR=0x68            # alamat I2C default DS3231 (0x68)
+RTC_TYPE=ds3231              # tipe chip: ds3231 | ds1307 | pcf8563
