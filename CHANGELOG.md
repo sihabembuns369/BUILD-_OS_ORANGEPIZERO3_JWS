@@ -1,5 +1,20 @@
 # CHANGELOG
 
+## [2026-11-14] Perbaikan False Alarm Thermal Shutdown: Eliminasi Emergency Power Down pada Detik 1.2
+- Apa yang diubah:
+  - **Mengatasi Emergency Hardware Protection Shutdown (`critical temperature reached, shutting down`)**:
+    - Menemukan penyebab shutdown mendadak di detik 1.2: Sensor termal internal Allwinner H618 (`thermal-sensor@5070400` / `ths`) pada kondisi boot dingin membaca data ADC mentah tanpa kalibrasi SID yang valid, sehingga secara keliru melaporkan suhu > 100°C. Hal ini langsung memicu trip-point `type = "critical"` pada `gpu-thermal` dan `cpu-thermal`, menyebabkan kernel mematikan daya secara paksa (*Hardware Protection Power Down*).
+    - Memperbarui `sun50i-h618-orangepi-zero3.dtb`:
+      1. Menyetel `status = "disabled"` pada `thermal-sensor@5070400`.
+      2. Mengubah tipe batas suhu `cpu-crit` dan `gpu-crit` dari `"critical"` menjadi `"passive"` serta menaikkan batas ambang suhu darurat ke 150°C.
+    - Menjamin sistem operasi tidak akan pernah mati mendadak akibat pembacaan palsu (*false positive*) sensor suhu SoC pada awal booting.
+  - **Deployment Windows Diperbarui**:
+    - Image mentah `orangepi_zero3_jws.img`, file zip `orangepi_zero3_jws.zip`, dan folder `BOOT_FILES_DIRECT_COPY` di `C:\Users\embun\Documents\ARMBIAN\JWS_NEW_VERSION\` telah diperbarui.
+- Alasan: Menindaklanjuti kendala booting yang mati paksa akibat false trigger thermal shutdown di hardware fisik Orange Pi Zero 3.
+- File/komponen terdampak: `output/sun50i-h618-orangepi-zero3.dtb`, `build/staging_boot/`, `CHANGELOG.md`.
+- Commit / tag: `fix(thermal): disable false critical thermal shutdown on h618 boot`
+
+
 ## [2026-11-14] Perbaikan Booting Hardware Asli: Eliminasi Hang Panfrost GPU & Pemulihan Konsol Serial UART
 - Apa yang diubah:
   - **Mengatasi Freeze/Stuck pada Hardware Asli di `panfrost 1800000.gpu: bus_clock rate`**:
