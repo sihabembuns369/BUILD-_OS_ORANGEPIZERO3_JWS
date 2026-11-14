@@ -29,7 +29,6 @@ find_rtc() {
         fi
     done
     [ -e "/dev/rtc1" ] && echo "/dev/rtc1" && return 0
-    [ -e "/dev/rtc0" ] && echo "/dev/rtc0" && return 0
     return 1
 }
 
@@ -50,22 +49,27 @@ case "$1" in
         DEV_RTC=$(find_rtc || true)
         if [ -n "$DEV_RTC" ] && [ -e "$DEV_RTC" ]; then
             echo "[rtc-sync] Menyinkronkan jam Linux dari RTC ($DEV_RTC)..."
-            hwclock --hctosys -f "$DEV_RTC" 2>/dev/null || true
+            timeout 3 hwclock --hctosys -f "$DEV_RTC" 2>/dev/null || true
             echo "[rtc-sync] Waktu sistem saat ini: $(date)"
+        else
+            echo "[rtc-sync] Modul RTC I2C tidak terdeteksi (mode offline/QEMU)."
         fi
+        exit 0
         ;;
     stop)
         DEV_RTC=$(find_rtc || true)
         if [ -n "$DEV_RTC" ] && [ -e "$DEV_RTC" ]; then
             echo "[rtc-sync] Menyimpan jam sistem Linux ke RTC ($DEV_RTC)..."
-            hwclock --systohc -f "$DEV_RTC" 2>/dev/null || true
+            timeout 3 hwclock --systohc -f "$DEV_RTC" 2>/dev/null || true
         fi
+        exit 0
         ;;
     save)
         DEV_RTC=$(find_rtc || true)
         if [ -n "$DEV_RTC" ] && [ -e "$DEV_RTC" ]; then
-            hwclock --systohc -f "$DEV_RTC" 2>/dev/null || true
+            timeout 3 hwclock --systohc -f "$DEV_RTC" 2>/dev/null || true
         fi
+        exit 0
         ;;
     *)
         echo "Usage: $0 {start|stop|save}"

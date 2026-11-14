@@ -4,6 +4,13 @@
 
 set -e
 
+# Pastikan partisi /boot ter-mount
+if ! mountpoint -q /boot; then
+    mount /dev/disk/by-label/BOOT /boot 2>/dev/null || \
+    mount /dev/mmcblk0p1 /boot 2>/dev/null || \
+    mount /dev/vda1 /boot 2>/dev/null || true
+fi
+
 SYS_CONF="/boot/system.conf"
 WIFI_CONF="/boot/wifi.conf"
 

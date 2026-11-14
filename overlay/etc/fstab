@@ -1,2 +1,2 @@
 # /etc/fstab: static file system information
-LABEL=BOOT      /boot    vfat    defaults,nofail,noauto,x-systemd.automount    0    2
+LABEL=BOOT      /boot    vfat    defaults,nofail,x-systemd.device-timeout=2s    0    0

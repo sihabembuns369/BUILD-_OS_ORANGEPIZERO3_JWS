@@ -3,6 +3,13 @@
 # Pengelola Splash Screen Dinamis untuk Orange Pi Zero 3 JWS
 # Menangani Image statis, Frame Sequences, dan Animasi GIF dengan Cache & Batas Aman
 
+# Pastikan partisi /boot ter-mount
+if ! mountpoint -q /boot; then
+    mount /dev/disk/by-label/BOOT /boot 2>/dev/null || \
+    mount /dev/mmcblk0p1 /boot 2>/dev/null || \
+    mount /dev/vda1 /boot 2>/dev/null || true
+fi
+
 CONF_FILE="/boot/splash.conf"
 THEME_DIR="/usr/share/plymouth/themes/jws-animated"
 CACHE_DIR="/var/cache/splash"
