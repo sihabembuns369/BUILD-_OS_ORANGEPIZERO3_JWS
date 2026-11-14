@@ -67,6 +67,10 @@ for target_path, link_dest in symlinks:
     cmds.append(f"rm {target_path}")
     cmds.append(f"symlink {target_path} {link_dest}")
 
+# Pastikan driver virtio_gpu_dri.so terhubung ke mega-driver kms_swrast_dri.so untuk VirGL 3D QEMU
+cmds.append("rm /usr/lib/aarch64-linux-gnu/dri/virtio_gpu_dri.so")
+cmds.append("symlink /usr/lib/aarch64-linux-gnu/dri/virtio_gpu_dri.so kms_swrast_dri.so")
+
 # Set permission khusus
 cmds.append("set_inode_field /etc/sudoers.d/jws mode 0100440")
 cmds.append("set_inode_field /etc/fstab mode 0100644")
