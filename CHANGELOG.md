@@ -1,5 +1,23 @@
 # CHANGELOG
 
+## [2026-11-14] Perbaikan Otentikasi SSH Password User JWS & Alokasi Ruang Disk Rootfs
+- Apa yang diubah:
+  - **Aktivasi Keyboard-Interactive Authentication untuk PuTTY & Windows SSH**:
+    - Mengaktifkan `KbdInteractiveAuthentication yes` di `/etc/ssh/sshd_config` dan generator drop-in `/etc/ssh/sshd_config.d/50-jws.conf` (`system-apply`). Hal ini memungkinkan PuTTY (yang secara default menggunakan mode *Keyboard-Interactive*) dan klien SSH Windows lainnya melakukan autentikasi password `jws` dengan sukses tanpa ditolak (`Permission denied`).
+  - **Perluasan Ruang Partisi Rootfs (Eliminasi Disk Full / ENOSPC)**:
+    - Menemukan bahwa partisi rootfs sebelumnya berada pada kondisi 100% penuh (`0 bytes free`) bagi pengguna non-root karena alokasi default 5% reserved blocks ext4. Kondisi ini menggagalkan pembuatan session token, PAM authentication temporary files, dan log SSH.
+    - Memperluas kapasitas rootfs menjadi 1.65GB dan menurunkan reserved blocks menjadi 1% (`tune2fs -m 1`), menyediakan ruang kosong sehat ~150-250MB untuk penyimpanan konfigurasi WiFi, cache splash, dan sesi SSH.
+  - **Penyediaan Binary ARM64 `/usr/bin/kill`**:
+    - Mengompilasi binary `kill` ARM64 native (10KB) untuk mendukung `ExecReload=/bin/kill -HUP $MAINPID` pada `ssh.service`, mencegah status failure `203/EXEC`.
+  - **Banner Panduan Login SSH di `/etc/issue` & `/etc/issue.net`**:
+    - Memperjelas informasi port koneksi: Port 22220 untuk simulasi QEMU (`ssh -p 22220 jws@localhost`) dan Port 22 untuk perangkat fisik Orange Pi Zero 3 (`ssh jws@jws-pi.local` / `ssh jws@<IP>`), dengan kredensial user: `jws` dan password: `jws`.
+  - **Sinkronisasi & Deployment Windows**:
+    - Memperbarui berkas image mentah `orangepi_zero3_jws.img` (1.8GB) dan file zip `orangepi_zero3_jws.zip` (579MB) serta folder `BOOT_FILES_DIRECT_COPY` di direktori Windows `C:\Users\embun\Documents\ARMBIAN\JWS_NEW_VERSION\`.
+- Alasan: Menindaklanjuti kendala gagal login password SSH user `jws` yang dialami pengguna.
+- File/komponen terdampak: `overlay/etc/ssh/sshd_config`, `overlay/usr/local/bin/system-apply`, `overlay/usr/bin/kill`, `overlay/etc/issue`, `overlay/etc/issue.net`, `scripts/04_create_image.sh`, `CHANGELOG.md`.
+- Commit / tag: `fix(ssh): aktifkan kbd-interactive, sediakan kill binary, dan perluas rootfs untuk login password jws`
+
+
 ## [2026-11-14] Perbaikan Menyeluruh: 0 Unit Failed, Restorasi Akselerasi 3D VirGL & Eliminasi Lag
 - Apa yang diubah:
   - **Mengatasi Seluruh Service FAILED saat Booting (0 Failed Units)**:

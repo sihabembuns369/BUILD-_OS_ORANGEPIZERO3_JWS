@@ -14,7 +14,7 @@ echo "=========================================================="
 
 IMAGE_NAME="orangepi_zero3_jws.img"
 IMAGE_PATH="${OUTPUT_DIR}/${IMAGE_NAME}"
-IMAGE_SIZE_MB=1520  # ~1.5GB total disk image (bebas bloatware, hemat tempat SD card)
+IMAGE_SIZE_MB=1780  # ~1.7GB total disk image (bebas bloatware, hemat tempat SD card)
 BOOT_SIZE_MB=96     # 96MB FAT32 boot partition (cukup untuk kernel + DTB + splash)
 
 mkdir -p "${OUTPUT_DIR}" "${BUILD_DIR}/staging_boot"

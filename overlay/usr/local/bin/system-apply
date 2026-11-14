@@ -64,6 +64,7 @@ if [ "${SSH_ENABLED,,}" = "yes" ]; then
 Port ${SSH_PORT}
 PermitRootLogin no
 PasswordAuthentication ${PASS_AUTH_VAL}
+KbdInteractiveAuthentication ${PASS_AUTH_VAL}
 PubkeyAuthentication yes
 EOF
 fi

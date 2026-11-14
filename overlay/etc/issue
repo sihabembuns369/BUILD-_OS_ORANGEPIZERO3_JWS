@@ -17,6 +17,8 @@
   * Hostname   : \n
   * IP Address : \4
   * Debug UART : ttyS0 / ttyAMA0 (115200 8N1 - Auto-login jws)
-  * Remote SSH : Port 22 (ssh jws@\4)
+  * Remote SSH : User: jws | Pass: jws
+                 Hardware : ssh jws@\n.local (Port 22)
+                 QEMU     : ssh -p 22220 jws@localhost
   * JWS Status : Auto-Start (Aktif Otomatis via systemd: jws.service)
 
