@@ -35,25 +35,60 @@ fi
 
 # 3. Salin File Image dengan Progress Bar
 echo ""
-echo "⏳ Memulai penyalinan image mentah (1.5GB) ke Windows (mohon tunggu)..."
-rsync -ah --progress "${SOURCE_IMG}" "${DEST_WIN_DIR}/orangepi_zero3_jws.img"
-
-# 4. Buat File Kompresi .zip Ringan (~450MB) untuk Balena Etcher
-echo ""
-echo "📦 Mengompres image menjadi format .zip super ringan untuk Balena Etcher..."
-(cd "${SCRIPT_DIR}/output" && zip -q -1 "${DEST_WIN_DIR}/orangepi_zero3_jws.zip" "orangepi_zero3_jws.img") || true
-if [ -f "${DEST_WIN_DIR}/orangepi_zero3_jws.zip" ]; then
-    ZIP_SIZE=$(du -h "${DEST_WIN_DIR}/orangepi_zero3_jws.zip" | cut -f1)
-    echo "✅ Berhasil membuat file zip ringan: ${ZIP_SIZE}"
+echo "⏳ [1/3] Menyalin file image mentah (${IMG_SIZE}) ke Windows..."
+if command -v pv >/dev/null 2>&1; then
+    pv -p -t -e -r -b "${SOURCE_IMG}" > "${DEST_WIN_DIR}/orangepi_zero3_jws.img"
+else
+    rsync -ah --info=progress2 "${SOURCE_IMG}" "${DEST_WIN_DIR}/orangepi_zero3_jws.img"
 fi
+
+# 4. Buat File Kompresi .zip Ringan (~500MB) untuk Balena Etcher
+echo ""
+echo "📦 [2/3] Mengompres image menjadi format .zip ringan untuk Balena Etcher..."
+python3 -c "
+import sys, os, time, zipfile
+
+src = '${SOURCE_IMG}'
+dst = '${DEST_WIN_DIR}/orangepi_zero3_jws.zip'
+total = os.path.getsize(src)
+start_time = time.time()
+chunk_size = 4 * 1024 * 1024  # 4MB chunks
+written = 0
+
+with open(src, 'rb') as f_in, zipfile.ZipFile(dst, 'w', compression=zipfile.ZIP_DEFLATED, compresslevel=1) as z_out:
+    zinfo = zipfile.ZipInfo(filename='orangepi_zero3_jws.img', date_time=time.localtime(time.time())[:6])
+    zinfo.compress_type = zipfile.ZIP_DEFLATED
+    zinfo.external_attr = 0o644 << 16
+    with z_out.open(zinfo, 'w') as f_out:
+        while True:
+            chunk = f_in.read(chunk_size)
+            if not chunk:
+                break
+            f_out.write(chunk)
+            written += len(chunk)
+            pct = (written / total) * 100
+            elapsed = time.time() - start_time
+            speed = (written / (1024 * 1024)) / elapsed if elapsed > 0 else 0
+            eta = ((total - written) / (1024 * 1024)) / speed if speed > 0 else 0
+            bar_len = 35
+            filled = int(round(bar_len * written / float(total)))
+            bar = '=' * filled + '>' if filled < bar_len else '=' * bar_len
+            bar = bar[:bar_len]
+            sys.stdout.write(f'\r📦 [{bar:<{bar_len}}] {pct:5.1f}% | {written/(1024*1024):.0f}/{total/(1024*1024):.0f} MB | {speed:5.1f} MB/s | ETA: {int(eta):2d}s')
+            sys.stdout.flush()
+
+elapsed = time.time() - start_time
+zip_sz = os.path.getsize(dst) / (1024 * 1024)
+print(f'\n✅ Selesai dalam {elapsed:.1f}s | Ukuran zip: {zip_sz:.1f} MB')
+"
 
 # 5. Salin Berkas Partisi BOOT ke Folder Terpisah (Bisa di-copy langsung via Windows Explorer)
 echo ""
-echo "📁 Menyalin berkas partisi BOOT (Kernel, DTB, boot.scr, extlinux, splash) ke Windows..."
+echo "📁 [3/3] Menyalin berkas partisi BOOT (Kernel, DTB, boot.scr, extlinux, splash) ke Windows..."
 BOOT_COPY_DIR="${DEST_WIN_DIR}/BOOT_FILES_DIRECT_COPY"
 rm -rf "${BOOT_COPY_DIR}"
 mkdir -p "${BOOT_COPY_DIR}"
-cp -r "${SCRIPT_DIR}/build/staging_boot"/* "${BOOT_COPY_DIR}/"
+rsync -ah --info=progress2 "${SCRIPT_DIR}/build/staging_boot/" "${BOOT_COPY_DIR}/"
 
 # 6. Buat File Panduan Burning Balena Etcher di Windows
 cat << 'EOF' > "${DEST_WIN_DIR}/CARA_BURN_BALENA_ETCHER.txt"
