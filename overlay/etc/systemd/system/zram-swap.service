@@ -1,0 +1,13 @@
+[Unit]
+Description=ZRAM or Swapfile Memory Optimization for 512MB RAM
+DefaultDependencies=no
+Before=sysinit.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/bin/sh -c 'if modprobe zram 2>/dev/null; then echo 256M > /sys/block/zram0/disksize 2>/dev/null && mkswap /dev/zram0 >/dev/null 2>&1 && swapon -p 100 /dev/zram0 >/dev/null 2>&1; elif [ ! -f /swapfile ]; then fallocate -l 128M /swapfile 2>/dev/null || dd if=/dev/zero of=/swapfile bs=1M count=128 2>/dev/null; chmod 600 /swapfile && mkswap /swapfile >/dev/null 2>&1 && swapon /swapfile >/dev/null 2>&1; else swapon /swapfile 2>/dev/null || true; fi'
+ExecStop=/bin/sh -c 'swapoff -a 2>/dev/null || true'
+
+[Install]
+WantedBy=sysinit.target

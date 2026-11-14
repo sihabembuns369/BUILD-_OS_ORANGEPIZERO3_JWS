@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # scripts/04_create_image.sh
 # Merakit file image (.img) siap burn untuk Orange Pi Zero 3 dan simulasi QEMU
+# Versi Ringan & Minimalis: ~1.5GB total image, cma=64M (hemat RAM 512MB), earlycon UART presisi
 
 set -e
 
@@ -8,13 +9,13 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/00_environment.sh"
 
 echo "=========================================================="
-echo " [4/4] Merakit Image Sistem (.img)"
+echo " [4/4] Merakit Image Sistem Minimalis (.img)"
 echo "=========================================================="
 
 IMAGE_NAME="orangepi_zero3_jws.img"
 IMAGE_PATH="${OUTPUT_DIR}/${IMAGE_NAME}"
-IMAGE_SIZE_MB=3200 # ~3.2GB total disk
-BOOT_SIZE_MB=128   # 128MB FAT32 boot partition
+IMAGE_SIZE_MB=1520  # ~1.5GB total disk image (bebas bloatware, hemat tempat SD card)
+BOOT_SIZE_MB=96     # 96MB FAT32 boot partition (cukup untuk kernel + DTB + splash)
 
 mkdir -p "${OUTPUT_DIR}" "${BUILD_DIR}/staging_boot"
 
@@ -40,12 +41,15 @@ cp -v "${ROOT_DIR}/configs/system.conf.example" "${STAGING_BOOT}/system.conf"
 cp -v "${ROOT_DIR}/configs/system.conf.example" "${STAGING_BOOT}/system.conf.example"
 cp -v "${ROOT_DIR}/configs/wifi.conf.example" "${STAGING_BOOT}/wifi.conf.example"
 
-# Konfigurasi boot.cmd & boot.scr standar U-Boot Allwinner sunxi (Native booti, TANPA EFI / extlinux agar tidak hang di Booting <NULL>)
+# Konfigurasi boot.cmd & boot.scr standar U-Boot Allwinner sunxi:
+# - earlycon=uart8250,mmio32,0x05000000: Mencetak log kernel sejak instruksi pertama di UART0
+# - console=tty1 console=ttyS0,115200: /dev/console di UART debug (ttyS0) sesuai aturan AGENTS.md
+# - cma=64M: Menghemat RAM untuk 512MB RAM SoC H618 (192M terlalu rakus dan menyebabkan OOM/hang)
 cat << 'EOF' > "${STAGING_BOOT}/boot.cmd"
 # Boot script for Orange Pi Zero 3 (Allwinner H618)
 setenv fdtfile sun50i-h618-orangepi-zero3.dtb
 setenv rootdev /dev/mmcblk0p2
-setenv bootargs "console=ttyS0,115200 console=tty1 root=${rootdev} rootwait rw video=HDMI-A-1:edid cma=192M drm.debug=0x1e quiet splash loglevel=3 plymouth.ignore-serial-consoles plymouth.ignore-udev vt.global_cursor_default=0"
+setenv bootargs "earlycon=uart8250,mmio32,0x05000000 console=tty1 console=ttyS0,115200 root=${rootdev} rootwait rw video=HDMI-A-1:edid cma=64M"
 
 echo "==> Memuat kernel Image..."
 if fatload mmc 0:1 ${kernel_addr_r} Image; then
@@ -72,19 +76,12 @@ EOF
 # Compile boot.cmd menjadi binary script U-Boot boot.scr
 mkimage -C none -A arm64 -T script -d "${STAGING_BOOT}/boot.cmd" "${STAGING_BOOT}/boot.scr"
 
-# Sediakan salinan di subfolder /boot untuk kompatibilitas script lawas
-mkdir -p "${STAGING_BOOT}/boot"
-cp -v "${STAGING_BOOT}/Image" "${STAGING_BOOT}/boot/" 2>/dev/null || true
-cp -v "${STAGING_BOOT}/sun50i-h618-orangepi-zero3.dtb" "${STAGING_BOOT}/boot/" 2>/dev/null || true
-cp -v "${STAGING_BOOT}/boot.cmd" "${STAGING_BOOT}/boot/" 2>/dev/null || true
-cp -v "${STAGING_BOOT}/boot.scr" "${STAGING_BOOT}/boot/" 2>/dev/null || true
-
 # Sediakan uEnv.txt di root partisi FAT32 untuk kompatibilitas firmware U-Boot legacy
 cat << 'EOF' > "${STAGING_BOOT}/uEnv.txt"
 fdtfile=sun50i-h618-orangepi-zero3.dtb
 rootdev=/dev/mmcblk0p2
-extraargs=video=HDMI-A-1:edid cma=192M drm.debug=0x1e quiet splash loglevel=3 plymouth.ignore-serial-consoles plymouth.ignore-udev vt.global_cursor_default=0
-bootargs=console=ttyS0,115200 console=tty1 root=/dev/mmcblk0p2 rootwait rw video=HDMI-A-1:edid cma=192M drm.debug=0x1e quiet splash loglevel=3 plymouth.ignore-serial-consoles plymouth.ignore-udev vt.global_cursor_default=0
+extraargs=video=HDMI-A-1:edid cma=64M
+bootargs=earlycon=uart8250,mmio32,0x05000000 console=tty1 console=ttyS0,115200 root=/dev/mmcblk0p2 rootwait rw video=HDMI-A-1:edid cma=64M
 bootcmd=fatload mmc 0:1 ${kernel_addr_r} Image; fatload mmc 0:1 ${fdt_addr_r} ${fdtfile}; booti ${kernel_addr_r} - ${fdt_addr_r}
 EOF
 
@@ -97,29 +94,36 @@ mformat -i "${BOOT_IMG}" -F -v "BOOT" ::
 # Salin seluruh isi staging_boot ke dalam boot.img FAT32
 mcopy -i "${BOOT_IMG}" -s "${STAGING_BOOT}"/* ::
 
-ROOT_IMG="${BUILD_DIR}/rootfs.img"
+ROOT_IMG="${BUILD_DIR}/rootfs_compact.img"
 if [ ! -f "${ROOT_IMG}" ]; then
-    echo "Error: File ${ROOT_IMG} tidak ditemukan!"
+    ROOT_IMG="${BUILD_DIR}/rootfs.img"
+fi
+
+if [ ! -f "${ROOT_IMG}" ]; then
+    echo "Error: File rootfs image tidak ditemukan!"
     exit 1
 fi
+
+echo "==> Menggunakan Rootfs: ${ROOT_IMG} ($(du -sh "${ROOT_IMG}" | cut -f1))"
 
 echo "==> Merakit disk image akhir (${IMAGE_PATH})..."
 rm -f "${IMAGE_PATH}"
 dd if=/dev/zero of="${IMAGE_PATH}" bs=1M count=0 seek="${IMAGE_SIZE_MB}" status=none
 
 # Hitung sektor partisi:
-# Sektor 2048 s/d 264191: Partisi 1 FAT32 (128MB)
-# Sektor 264192 s/d end: Partisi 2 EXT4 (ROOTFS)
+# BOOT_SIZE_MB=96 -> 96 * 2048 sektor = 196608 sektor
+# Sektor 2048 s/d 198655: Partisi 1 FAT32 (96MB)
+# Sektor 198656 s/d end: Partisi 2 EXT4 (ROOTFS ~1420MB)
 parted -s "${IMAGE_PATH}" mklabel msdos
-parted -s "${IMAGE_PATH}" mkpart primary fat32 2048s 264191s
+parted -s "${IMAGE_PATH}" mkpart primary fat32 2048s 198655s
 parted -s "${IMAGE_PATH}" set 1 boot on
-parted -s "${IMAGE_PATH}" mkpart primary ext4 264192s 100%
+parted -s "${IMAGE_PATH}" mkpart primary ext4 198656s 100%
 
 echo "==> Menulis partisi BOOT ke disk image..."
 dd if="${BOOT_IMG}" of="${IMAGE_PATH}" bs=512 seek=2048 conv=notrunc status=none
 
 echo "==> Menulis partisi ROOTFS ke disk image..."
-dd if="${ROOT_IMG}" of="${IMAGE_PATH}" bs=512 seek=264192 conv=notrunc status=none
+dd if="${ROOT_IMG}" of="${IMAGE_PATH}" bs=512 seek=198656 conv=notrunc status=none
 
 # Tulis bootloader Allwinner SPL ke offset 8KB
 UBOOT_BIN="${OUTPUT_DIR}/u-boot-sunxi-with-spl.bin"
