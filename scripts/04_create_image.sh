@@ -43,7 +43,9 @@ cp -v "${ROOT_DIR}/configs/wifi.conf.example" "${STAGING_BOOT}/wifi.conf.example
 
 # Konfigurasi boot.cmd & boot.scr standar U-Boot Allwinner sunxi:
 # - earlycon: Menggunakan chosen/stdout-path dari DTB (uart0 115200) secara otomatis dan aman (tanpa bug MMIO unaligned)
-# - console=ttyS0,115200 console=tty1: Log boot keluar di UART dan HDMI
+# - console=tty1 console=ttyS0,115200: UART adalah console terakhir (/dev/console), seluruh teks booting & login keluar di UART (PuTTY)
+# - quiet splash loglevel=3 plymouth.ignore-serial-consoles vt.global_cursor_default=0: HDMI murni menampilkan grafis splash
+# - initcall_blacklist=panfrost_driver_init: Menonaktifkan panfrost built-in yang membekukan bus register Allwinner H618
 # - kernel_addr_r=0x40200000: Memuat kernel langsung di text offset ARM64 agar tidak perlu memmove 43MB
 # - cma=64M: Menghemat RAM untuk 512MB RAM SoC H618
 cat << 'EOF' > "${STAGING_BOOT}/boot.cmd"
@@ -51,7 +53,7 @@ cat << 'EOF' > "${STAGING_BOOT}/boot.cmd"
 setenv fdtfile sun50i-h618-orangepi-zero3.dtb
 setenv rootdev /dev/mmcblk0p2
 setenv kernel_addr_r 0x40200000
-setenv bootargs "earlycon console=ttyS0,115200 console=tty1 root=${rootdev} rootwait rw cma=64M"
+setenv bootargs "earlycon console=tty1 console=ttyS0,115200 root=${rootdev} rootwait rw cma=64M quiet splash loglevel=3 plymouth.ignore-serial-consoles vt.global_cursor_default=0 initcall_blacklist=panfrost_driver_init"
 
 echo "==> Memuat kernel Image ke ${kernel_addr_r}..."
 if fatload mmc 0:1 ${kernel_addr_r} Image; then
@@ -84,7 +86,7 @@ cat << 'EOF' > "${STAGING_BOOT}/extlinux/extlinux.conf"
 LABEL OrangePi_Zero3_JWS
     LINUX /Image
     FDT /sun50i-h618-orangepi-zero3.dtb
-    APPEND earlycon console=ttyS0,115200 console=tty1 root=/dev/mmcblk0p2 rootwait rw cma=64M
+    APPEND earlycon console=tty1 console=ttyS0,115200 root=/dev/mmcblk0p2 rootwait rw cma=64M quiet splash loglevel=3 plymouth.ignore-serial-consoles vt.global_cursor_default=0 initcall_blacklist=panfrost_driver_init
 EOF
 
 # Sediakan uEnv.txt di root partisi FAT32 untuk kompatibilitas firmware U-Boot legacy
@@ -93,7 +95,7 @@ fdtfile=sun50i-h618-orangepi-zero3.dtb
 rootdev=/dev/mmcblk0p2
 kernel_addr_r=0x40200000
 extraargs=cma=64M
-bootargs=earlycon console=ttyS0,115200 console=tty1 root=/dev/mmcblk0p2 rootwait rw cma=64M
+bootargs=earlycon console=tty1 console=ttyS0,115200 root=/dev/mmcblk0p2 rootwait rw cma=64M quiet splash loglevel=3 plymouth.ignore-serial-consoles vt.global_cursor_default=0 initcall_blacklist=panfrost_driver_init
 bootcmd=fatload mmc 0:1 0x40200000 Image; fatload mmc 0:1 ${fdt_addr_r} ${fdtfile}; booti 0x40200000 - ${fdt_addr_r}
 EOF
 

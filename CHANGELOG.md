@@ -1,5 +1,21 @@
 # CHANGELOG
 
+## [2026-11-14] Perbaikan Booting Hardware Asli: Eliminasi Hang Panfrost GPU & Pemulihan Konsol Serial UART
+- Apa yang diubah:
+  - **Mengatasi Freeze/Stuck pada Hardware Asli di `panfrost 1800000.gpu: bus_clock rate`**:
+    - Menemukan akar masalah freeze: Node `gpu@1800000` di DTB berstatus `okay`. Driver `panfrost` pada kernel mainline ketika melakukan soft-reset register GPU Mali-G31 di SoC Allwinner H618 mengalami AXI bus lockup (membekukan CPU seketika).
+    - Mengubah status node `gpu@1800000` di `sun50i-h618-orangepi-zero3.dtb` menjadi `status = "disabled"`, dan menambahkan kernel parameter `initcall_blacklist=panfrost_driver_init` pada `bootargs`.
+    - Tampilan display HDMI tetap dikendalikan 100% mulus oleh driver DRM/KMS `sun4i-drm` (Display Engine 3.3) yang telah terbukti aktif dan berjalan normal (`fb0: sun4i-drmdrmfb`).
+  - **Pemulihan Konsol Serial UART (PuTTY) & Pemisahan Layar HDMI Sesuai Spesifikasi**:
+    - Memperbaiki urutan `console=` di `boot.cmd`, `boot.scr`, `extlinux.conf`, dan `uEnv.txt` menjadi: `console=tty1 console=ttyS0,115200`. Dengan `ttyS0` di urutan terakhir, `/dev/console` otomatis diarahkan ke serial UART, sehingga seluruh status booting systemd `[ OK ]` dan auto-login user `jws` keluar di PuTTY (COM5).
+    - Mengaktifkan `quiet splash loglevel=3 plymouth.ignore-serial-consoles vt.global_cursor_default=0` agar layar HDMI/LCD murni menampilkan grafis splash screen tanpa ada bocoran teks boot.
+  - **Deployment Windows Diperbarui**:
+    - Image `orangepi_zero3_jws.img` (1.8GB), file zip `orangepi_zero3_jws.zip` (583MB), dan folder update cepat `BOOT_FILES_DIRECT_COPY` di `C:\Users\embun\Documents\ARMBIAN\JWS_NEW_VERSION\` telah diperbarui.
+- Alasan: Menindaklanjuti kendala booting yang stuck/freeze di `panfrost 1800000.gpu` pada hardware fisik Orange Pi Zero 3.
+- File/komponen terdampak: `output/sun50i-h618-orangepi-zero3.dtb`, `scripts/04_create_image.sh`, `build/staging_boot/`, `CHANGELOG.md`.
+- Commit / tag: `fix(boot): disable panfrost gpu bus lockup, arahkan /dev/console ke uart ttyS0`
+
+
 ## [2026-11-14] Perbaikan Otentikasi SSH Password User JWS & Alokasi Ruang Disk Rootfs
 - Apa yang diubah:
   - **Aktivasi Keyboard-Interactive Authentication untuk PuTTY & Windows SSH**:
