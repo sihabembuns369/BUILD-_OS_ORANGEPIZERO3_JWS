@@ -17,5 +17,5 @@
   * Hostname   : %h
   * Debug UART : ttyS0 / ttyAMA0 (115200 8N1 - Auto-login jws)
   * Remote SSH : Port 22 (ssh jws@%h)
-  * JWS Status : Standby - Menunggu biner aplikasi di /opt/jws/jws
+  * JWS Status : Auto-Start (Aktif Otomatis via systemd: jws.service)
 

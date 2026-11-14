@@ -76,6 +76,15 @@ EOF
 # Compile boot.cmd menjadi binary script U-Boot boot.scr
 mkimage -C none -A arm64 -T script -d "${STAGING_BOOT}/boot.cmd" "${STAGING_BOOT}/boot.scr"
 
+# Sediakan extlinux/extlinux.conf untuk U-Boot distro boot
+mkdir -p "${STAGING_BOOT}/extlinux"
+cat << 'EOF' > "${STAGING_BOOT}/extlinux/extlinux.conf"
+LABEL OrangePi_Zero3_JWS
+    LINUX /Image
+    FDT /sun50i-h618-orangepi-zero3.dtb
+    APPEND earlycon=uart8250,mmio32,0x05000000 console=tty1 console=ttyS0,115200 root=/dev/mmcblk0p2 rootwait rw video=HDMI-A-1:edid cma=64M
+EOF
+
 # Sediakan uEnv.txt di root partisi FAT32 untuk kompatibilitas firmware U-Boot legacy
 cat << 'EOF' > "${STAGING_BOOT}/uEnv.txt"
 fdtfile=sun50i-h618-orangepi-zero3.dtb

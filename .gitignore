@@ -21,6 +21,7 @@ busybox/
 *.tar
 *.tar.gz
 *.tar.xz
+overlay/lib/modules/
 
 # Splash conversion cache & temporary frames
 cache/

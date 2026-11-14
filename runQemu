@@ -80,7 +80,7 @@ while true; do
     -M virt \
     -cpu cortex-a53 \
     -smp 4 \
-    -m 2G \
+    -m 512M \
     ${KERNEL_OPTS} \
     -drive file="${IMG_FILE}",format=raw,if=virtio \
     ${DISPLAY_OPTS} \

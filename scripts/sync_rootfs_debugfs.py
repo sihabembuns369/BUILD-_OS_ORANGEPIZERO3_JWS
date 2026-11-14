@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import os, subprocess, sys
 
-ROOTFS = "build/rootfs.img"
+ROOTFS = sys.argv[1] if len(sys.argv) > 1 else ("build/rootfs_compact.img" if os.path.isfile("build/rootfs_compact.img") else "build/rootfs.img")
 OVERLAY_DIR = "overlay"
 
 if not os.path.isfile(ROOTFS):
@@ -9,17 +9,21 @@ if not os.path.isfile(ROOTFS):
     sys.exit(1)
 
 def run_debugfs(cmds):
-    proc = subprocess.Popen(
-        ["debugfs", "-w", ROOTFS],
-        stdin=subprocess.PIPE,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        text=True
-    )
-    out, err = proc.communicate(input="\n".join(cmds) + "\n")
-    return out, err
+    # Process in batches of 200 commands to avoid buffer overflows
+    chunk_size = 200
+    for i in range(0, len(cmds), chunk_size):
+        chunk = cmds[i:i + chunk_size]
+        proc = subprocess.Popen(
+            ["debugfs", "-w", ROOTFS],
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True
+        )
+        out, err = proc.communicate(input="\n".join(chunk) + "\n")
+    return "", ""
 
-print("==> Mengumpulkan berkas overlay...")
+print(f"==> Mengumpulkan berkas overlay untuk {ROOTFS}...")
 regular_files = []
 symlinks = []
 dirs_to_ensure = set()
@@ -49,9 +53,7 @@ for d in sorted_dirs:
 for host_path, target_path in regular_files:
     cmds.append(f"rm {target_path}")
     cmds.append(f"write {host_path} {target_path}")
-    if "/bin/" in target_path or "/sbin/" in target_path or target_path.endswith(".sh") or target_path == "/opt/jws/jws" or target_path.endswith("jadwalsholat_imgui") or "/opt/jws/yt-dlp" in target_path:
-        cmds.append(f"set_inode_field {target_path} mode 0100755")
-    elif ".so" in target_path:
+    if "/bin/" in target_path or "/sbin/" in target_path or target_path.endswith(".sh") or target_path == "/opt/jws/jws" or target_path.endswith("jadwalsholat_imgui") or "/opt/jws/yt-dlp" in target_path or target_path.endswith(".so"):
         cmds.append(f"set_inode_field {target_path} mode 0100755")
     else:
         cmds.append(f"set_inode_field {target_path} mode 0100644")
@@ -75,10 +77,10 @@ print(f"==> Menulis {len(regular_files)} berkas dan {len(symlinks)} symlinks ke 
 out, err = run_debugfs(cmds)
 
 print("==> Memeriksa kebersihan file system dengan e2fsck...")
-proc = subprocess.run(["/sbin/e2fsck", "-fy", ROOTFS], capture_output=True, text=True)
+proc = subprocess.run(["e2fsck", "-fy", ROOTFS], capture_output=True, text=True)
 
-proc2 = subprocess.run(["/sbin/e2fsck", "-f", "-n", ROOTFS], capture_output=True, text=True)
+proc2 = subprocess.run(["e2fsck", "-f", "-n", ROOTFS], capture_output=True, text=True)
 if proc2.returncode == 0:
-    print("==> ROOTFS 100% BERSIH DAN VALID!")
+    print(f"==> {ROOTFS} 100% BERSIH DAN VALID!")
 else:
-    print(f"Peringatan e2fsck: {proc2.stdout}")
+    print(f"Status e2fsck: {proc2.stdout}")

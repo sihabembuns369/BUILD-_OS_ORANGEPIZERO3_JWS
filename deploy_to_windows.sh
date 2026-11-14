@@ -35,7 +35,7 @@ fi
 
 # 3. Salin File Image dengan Progress Bar
 echo ""
-echo "⏳ Memulai penyalinan image mentah ke Windows (mohon tunggu)..."
+echo "⏳ Memulai penyalinan image mentah (1.5GB) ke Windows (mohon tunggu)..."
 rsync -ah --progress "${SOURCE_IMG}" "${DEST_WIN_DIR}/orangepi_zero3_jws.img"
 
 # 4. Buat File Kompresi .zip Ringan (~450MB) untuk Balena Etcher
@@ -47,33 +47,46 @@ if [ -f "${DEST_WIN_DIR}/orangepi_zero3_jws.zip" ]; then
     echo "✅ Berhasil membuat file zip ringan: ${ZIP_SIZE}"
 fi
 
-# 5. Buat File Panduan Burning Balena Etcher di Windows
+# 5. Salin Berkas Partisi BOOT ke Folder Terpisah (Bisa di-copy langsung via Windows Explorer)
+echo ""
+echo "📁 Menyalin berkas partisi BOOT (Kernel, DTB, boot.scr, extlinux, splash) ke Windows..."
+BOOT_COPY_DIR="${DEST_WIN_DIR}/BOOT_FILES_DIRECT_COPY"
+rm -rf "${BOOT_COPY_DIR}"
+mkdir -p "${BOOT_COPY_DIR}"
+cp -r "${SCRIPT_DIR}/build/staging_boot"/* "${BOOT_COPY_DIR}/"
+
+# 6. Buat File Panduan Burning Balena Etcher di Windows
 cat << 'EOF' > "${DEST_WIN_DIR}/CARA_BURN_BALENA_ETCHER.txt"
 ================================================================================
 PANDUAN FLASHING / BURNING IMAGE OS ORANGE PI ZERO 3 (JWS)
 ================================================================================
 
-Tersedia 2 pilihan file image (pilih salah satu di Balena Etcher):
-A. orangepi_zero3_jws.zip  -> File kompresi super ringan (~500MB), flash lebih cepat!
-B. orangepi_zero3_jws.img  -> File mentah image (3.0GB).
+Tersedia 2 pilihan file image (pilih salah satu di Balena Etcher / Rufus):
+A. orangepi_zero3_jws.img  -> File mentah image 1.5GB (SANGAT RINGAN & CEPAT FLASH!).
+B. orangepi_zero3_jws.zip  -> File kompresi super hemat bandwidth (~500MB).
 
-Langkah Flashing:
-1. Buka aplikasi Balena Etcher di Windows.
-2. Klik tombol "Flash from file".
-3. Pilih salah satu file di atas (misal: orangepi_zero3_jws.zip).
-   *Catatan: Balena Etcher bisa langsung burn file .zip tanpa perlu diekstrak!
-4. Klik "Select target" -> Pilih MicroSD Card Anda (minimal 4GB / 8GB).
-5. Klik "Flash!" dan tunggu sampai proses selesai.
-6. Masukkan MicroSD ke Orange Pi Zero 3:
-   - Hubungkan kabel HDMI ke TV/Monitor.
-   - Hubungkan adaptor daya USB Type-C (5V 3A disarankan).
-   - Layar akan langsung menampilkan boot splash animasi/gambar dan aplikasi
-     Jadwal Sholat Digital akan berjalan otomatis fullscreen.
+Alternatif Update Cepat (Tanpa Flash Ulang):
+Jika SD Card Anda sudah memiliki partisi BOOT (FAT) dan partisi ROOTFS:
+Cukup salin seluruh isi folder "BOOT_FILES_DIRECT_COPY" ke dalam partisi SD Card
+(Drive BOOT di Windows Explorer) untuk mengganti kernel, DTB, dan boot script!
 
-Akses Remote & Debug:
-- SSH: ssh jws@<IP_ORANGEPI> atau ssh jws@jws-pi.local (Password: jws)
-- UART Debug: Pin Header UART0 (ttyS0, Baudrate 115200 8N1)
-- Web Remote: Buka browser di HP/Laptop: http://<IP_ORANGEPI>:8080
+Langkah Flashing Bersih via Balena Etcher / Rufus:
+1. Masukkan MicroSD Card ke Card Reader PC Windows.
+2. Buka Balena Etcher (atau Rufus bila Balena Etcher mengalami error sidecar).
+3. Pilih "orangepi_zero3_jws.img" (atau .zip).
+4. Pilih drive MicroSD Card Anda (minimal 2GB/4GB/8GB).
+5. Klik "Flash!" dan tunggu hingga 100% Verified.
+6. Lepas MicroSD dan pasang ke Orange Pi Zero 3:
+   - Pasang kabel HDMI ke TV/Monitor.
+   - Pasang kabel USB Type-C daya 5V 2A-3A.
+   - Booting teks HANYA keluar di UART Debug (ttyS0, 115200 8N1).
+   - Layar HDMI murni menampilkan splash animasi dan langsung masuk ke aplikasi JWS.
+
+Spesifikasi & Optimasi:
+- Kernel : Linux 6.1.31 (Driver Display Engine DE33 & HDMI PHY aktif fisik)
+- RAM    : Dioptimasi khusus RAM 512MB (cma=64M + 256MB ZRAM Swap aktif)
+- Display: KMS/DRM murni (bebas X11/Desktop bloatware)
+- Akses  : SSH aktif (user: jws, pass: jws), UART auto-login jws.
 ================================================================================
 EOF
 
@@ -82,15 +95,8 @@ echo "============================================================"
 echo "✅ BERHASIL DI-DEPLOY KE WINDOWS!"
 echo "============================================================"
 echo "Lokasi File di Windows:"
-echo "👉 C:\\Users\\embun\\Documents\\ARMBIAN\\JWS_NEW_VERSION\\orangepi_zero3_jws.zip (Ringan ~500MB)"
-echo "👉 C:\\Users\\embun\\Documents\\ARMBIAN\\JWS_NEW_VERSION\\orangepi_zero3_jws.img (Mentah 3.0GB)"
+echo "👉 C:\\Users\\embun\\Documents\\ARMBIAN\\JWS_NEW_VERSION\\orangepi_zero3_jws.img (1.5GB Mentah)"
+echo "👉 C:\\Users\\embun\\Documents\\ARMBIAN\\JWS_NEW_VERSION\\orangepi_zero3_jws.zip (~500MB)"
+echo "👉 C:\\Users\\embun\\Documents\\ARMBIAN\\JWS_NEW_VERSION\\BOOT_FILES_DIRECT_COPY\\"
 echo "👉 C:\\Users\\embun\\Documents\\ARMBIAN\\JWS_NEW_VERSION\\CARA_BURN_BALENA_ETCHER.txt"
-echo ""
-echo "Tips: Anda bisa langsung memilih file .zip di Balena Etcher tanpa perlu ekstrak!"
-echo "============================================================"
-echo "Lokasi File di Windows:"
-echo "👉 C:\\Users\\embun\\Documents\\ARMBIAN\\JWS_NEW_VERSION\\orangepi_zero3_jws.img"
-echo "👉 C:\\Users\\embun\\Documents\\ARMBIAN\\JWS_NEW_VERSION\\CARA_BURN_BALENA_ETCHER.txt"
-echo ""
-echo "Silakan buka Balena Etcher di Windows dan langsung flash file tersebut ke MicroSD!"
 echo "============================================================"
