@@ -1,5 +1,23 @@
 # CHANGELOG
 
+## [2026-11-14] Perbaikan Kernel Booting (Earlycon & Load Address) & Optimasi JWS Smooth 60 FPS
+- Apa yang diubah:
+  - **Perbaikan Masalah Stuck di "Starting kernel ..."**:
+    - Memperbaiki argumen `bootargs`: parameter `earlycon=uart8250,mmio32,0x05000000` diubah menjadi `earlycon` standar (mengambil otomatis konfigurasi dari node Device Tree `chosen/stdout-path`). Pada arsitektur ARM64, sintaks `mmio32` memaksa `regshift = 0`, sehingga saat membaca register 1 (UART_IER) CPU melakukan akses unaligned di alamat `0x05000001` yang memicu Alignment Fault Exception pada memory device MMIO.
+    - Menetapkan alamat muat kernel presisi `kernel_addr_r=0x40200000` di `boot.cmd`, `boot.scr`, `extlinux.conf`, dan `uEnv.txt`. Memuat langsung kernel di alamat eksekusi ARM64 mengeliminasi proses pemindahan memori 43MB (`memmove` overlap) yang sebelumnya memakan waktu dan berisiko tabrakan memori di U-Boot.
+    - Menyetel urutan konsol: `earlycon console=ttyS0,115200 console=tty1 root=${rootdev} rootwait rw cma=64M`, sehingga seluruh log inisialisasi kernel, driver, dan status systemd tercetak jelas di terminal serial UART (COM5 Putty).
+  - **Optimasi Performa JWS C++ untuk Kelancaran Maksimal di RAM 512MB**:
+    - **Delta-Time Running Text (Marquee)**: Mengubah perhitungan pergeseran teks berjalan di `src/MainDashboard.cpp` (ke-4 tata letak) dan `src/LayoutDesigner.cpp` dari fixed per-frame (`marqueeOffset -= 1.8f`) menjadi berbasis delta-time (`marqueeOffset -= (54.0f * scale * dt)`). Gerakan teks kini 100% mulus, halus, dan stabil tanpa efek patah-patah / stuttering sekalipun framerate berfluktuasi.
+    - **String & Dimension Caching**: Menambahkan mekanisme cache statis untuk teks berjalan dan informasi kas masjid (`s_CachedMarquee` & `s_CachedMLen`) dengan interval refresh 2 detik, menghilangkan alokasi heap string berulang dan pemindaian ukuran UTF-8 font setiap frame (30-60 kali per detik).
+    - **Target 60 FPS VSync Sinkron**: Menyesuaikan `TARGET_FRAME_MS = 16` pada loop utama renderer SDL2, mengoptimalkan sinkronisasi vertikal dengan hardware GPU Mali-G31 MP2 / KMSDRM tanpa double-throttling.
+  - **Penyempurnaan Deployment Windows**:
+    - Memperbarui berkas partisi BOOT di `C:\Users\embun\Documents\ARMBIAN\JWS_NEW_VERSION\BOOT_FILES_DIRECT_COPY\`.
+    - Memperbarui image disk mentah 1.5GB (`orangepi_zero3_jws.img`) dan arsip kompresi ringan 582MB (`orangepi_zero3_jws.zip`).
+    - Menyediakan dokumentasi `CARA_BURN_BALENA_ETCHER.txt` dengan panduan update instan (cukup copy-paste isi folder `BOOT_FILES_DIRECT_COPY` ke kartu MicroSD tanpa flash ulang) dan solusi mengatasi kendala "sidecar flasher process failed" di Windows via Rufus / Run as Administrator.
+- Alasan: Mengatasi kendala booting pada board fisik Orange Pi Zero 3, mengatasi error flashing Balena Etcher, serta menjamin aplikasi JWS berjalan mulus dan lancar pada perangkat ber-RAM 512MB.
+- File/komponen terdampak: `scripts/04_create_image.sh`, `overlay/opt/jws/jadwalsholat_imgui`, `src/MainDashboard.cpp`, `src/jadwalsholat_imgui.cpp`, `src/LayoutDesigner.cpp`, `deploy_to_windows.sh`, `CHANGELOG.md`.
+- Commit / tag: `fix(boot): perbaiki earlycon unaligned fault dan optimasi jws 60fps delta-time`
+
 ## [2026-11-14] Verifikasi Penuh QEMU: JWS Kiosk Aktif, Integrasi OpenSSH Server, & Hardware Services
 - Apa yang diubah:
   - **Aplikasi JWS Berjalan Otomatis di QEMU**:

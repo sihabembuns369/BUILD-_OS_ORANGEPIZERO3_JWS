@@ -42,16 +42,18 @@ cp -v "${ROOT_DIR}/configs/system.conf.example" "${STAGING_BOOT}/system.conf.exa
 cp -v "${ROOT_DIR}/configs/wifi.conf.example" "${STAGING_BOOT}/wifi.conf.example"
 
 # Konfigurasi boot.cmd & boot.scr standar U-Boot Allwinner sunxi:
-# - earlycon=uart8250,mmio32,0x05000000: Mencetak log kernel sejak instruksi pertama di UART0
-# - console=tty1 console=ttyS0,115200: /dev/console di UART debug (ttyS0) sesuai aturan AGENTS.md
-# - cma=64M: Menghemat RAM untuk 512MB RAM SoC H618 (192M terlalu rakus dan menyebabkan OOM/hang)
+# - earlycon: Menggunakan chosen/stdout-path dari DTB (uart0 115200) secara otomatis dan aman (tanpa bug MMIO unaligned)
+# - console=ttyS0,115200 console=tty1: Log boot keluar di UART dan HDMI
+# - kernel_addr_r=0x40200000: Memuat kernel langsung di text offset ARM64 agar tidak perlu memmove 43MB
+# - cma=64M: Menghemat RAM untuk 512MB RAM SoC H618
 cat << 'EOF' > "${STAGING_BOOT}/boot.cmd"
 # Boot script for Orange Pi Zero 3 (Allwinner H618)
 setenv fdtfile sun50i-h618-orangepi-zero3.dtb
 setenv rootdev /dev/mmcblk0p2
-setenv bootargs "earlycon=uart8250,mmio32,0x05000000 console=tty1 console=ttyS0,115200 root=${rootdev} rootwait rw video=HDMI-A-1:edid cma=64M"
+setenv kernel_addr_r 0x40200000
+setenv bootargs "earlycon console=ttyS0,115200 console=tty1 root=${rootdev} rootwait rw cma=64M"
 
-echo "==> Memuat kernel Image..."
+echo "==> Memuat kernel Image ke ${kernel_addr_r}..."
 if fatload mmc 0:1 ${kernel_addr_r} Image; then
     echo "Kernel loaded from Image"
 elif fatload mmc 0:1 ${kernel_addr_r} /boot/Image; then
@@ -82,16 +84,17 @@ cat << 'EOF' > "${STAGING_BOOT}/extlinux/extlinux.conf"
 LABEL OrangePi_Zero3_JWS
     LINUX /Image
     FDT /sun50i-h618-orangepi-zero3.dtb
-    APPEND earlycon=uart8250,mmio32,0x05000000 console=tty1 console=ttyS0,115200 root=/dev/mmcblk0p2 rootwait rw video=HDMI-A-1:edid cma=64M
+    APPEND earlycon console=ttyS0,115200 console=tty1 root=/dev/mmcblk0p2 rootwait rw cma=64M
 EOF
 
 # Sediakan uEnv.txt di root partisi FAT32 untuk kompatibilitas firmware U-Boot legacy
 cat << 'EOF' > "${STAGING_BOOT}/uEnv.txt"
 fdtfile=sun50i-h618-orangepi-zero3.dtb
 rootdev=/dev/mmcblk0p2
-extraargs=video=HDMI-A-1:edid cma=64M
-bootargs=earlycon=uart8250,mmio32,0x05000000 console=tty1 console=ttyS0,115200 root=/dev/mmcblk0p2 rootwait rw video=HDMI-A-1:edid cma=64M
-bootcmd=fatload mmc 0:1 ${kernel_addr_r} Image; fatload mmc 0:1 ${fdt_addr_r} ${fdtfile}; booti ${kernel_addr_r} - ${fdt_addr_r}
+kernel_addr_r=0x40200000
+extraargs=cma=64M
+bootargs=earlycon console=ttyS0,115200 console=tty1 root=/dev/mmcblk0p2 rootwait rw cma=64M
+bootcmd=fatload mmc 0:1 0x40200000 Image; fatload mmc 0:1 ${fdt_addr_r} ${fdtfile}; booti 0x40200000 - ${fdt_addr_r}
 EOF
 
 echo "==> Membuat partisi BOOT (FAT32) dengan mformat & mcopy..."
