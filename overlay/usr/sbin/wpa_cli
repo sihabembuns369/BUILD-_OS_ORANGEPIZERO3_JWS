@@ -1,0 +1,43 @@
+#!/bin/sh
+# Wrapper wpa_cli untuk Orange Pi Zero 3 (Unisoc UWE5622 / sprdwl_ng)
+# Memastikan wpa_supplicant aktif dan memberi jeda waktu scan hardware cukup sebelum scan_results dibaca.
+
+CONF="/etc/wpa_supplicant/wpa_supplicant.conf"
+[ ! -f "$CONF" ] && CONF="/etc/wpa_supplicant.conf"
+if [ ! -f "$CONF" ]; then
+    mkdir -p /etc/wpa_supplicant
+    printf "ctrl_interface=/var/run/wpa_supplicant\nupdate_config=1\n" > /etc/wpa_supplicant/wpa_supplicant.conf
+    CONF="/etc/wpa_supplicant/wpa_supplicant.conf"
+fi
+
+if [ ! -d /sys/class/net/wlan0 ]; then
+    modprobe uwe5622_bsp_sdio 2>/dev/null || true
+    modprobe sprdwl_ng 2>/dev/null || true
+    sleep 1
+fi
+
+ip link set wlan0 up 2>/dev/null || /usr/bin/busybox ifconfig wlan0 up 2>/dev/null || true
+mkdir -p /var/run/wpa_supplicant
+
+if ! pgrep -x wpa_supplicant >/dev/null 2>&1; then
+    rm -rf /var/run/wpa_supplicant/* 2>/dev/null || true
+    /usr/sbin/wpa_supplicant -B -i wlan0 -Dnl80211 -c "$CONF" >/dev/null 2>&1 || \
+    /usr/sbin/wpa_supplicant -B -i wlan0 -c "$CONF" >/dev/null 2>&1 || true
+    sleep 1
+fi
+
+OUT=$(/usr/sbin/wpa_cli.real "$@" 2>/dev/null)
+RET=$?
+printf "%s\n" "$OUT"
+
+# Jika perintah adalah 'scan' (bukan 'scan_results'), tunggu 2 detik agar driver sprdwl_ng
+# menyelesaikan pemindaian frekuensi 2.4GHz/5GHz sebelum aplikasi JWS memanggil 'scan_results'.
+LAST_ARG=""
+for arg in "$@"; do
+    LAST_ARG="$arg"
+done
+if [ "$LAST_ARG" = "scan" ]; then
+    sleep 2
+fi
+
+exit $RET

@@ -54,7 +54,7 @@ cat << 'EOF' > "${STAGING_BOOT}/boot.cmd"
 setenv fdtfile sun50i-h618-orangepi-zero3.dtb
 setenv rootdev /dev/mmcblk0p2
 setenv kernel_addr_r 0x40200000
-setenv bootargs "earlycon console=tty1 console=ttyS0,115200 root=${rootdev} rootwait rw cma=64M quiet splash loglevel=3 plymouth.ignore-serial-consoles vt.global_cursor_default=0 initcall_blacklist=panfrost_driver_init"
+setenv bootargs "earlycon console=tty1 console=ttyS0,115200 root=${rootdev} rootwait rw cma=64M quiet splash loglevel=3 plymouth.ignore-serial-consoles vt.global_cursor_default=0 initcall_blacklist=panfrost_driver_init video=HDMI-A-1:1280x720@60"
 
 echo "==> Memuat kernel Image ke ${kernel_addr_r}..."
 if fatload mmc 0:1 ${kernel_addr_r} Image; then
@@ -87,7 +87,7 @@ cat << 'EOF' > "${STAGING_BOOT}/extlinux/extlinux.conf"
 LABEL OrangePi_Zero3_JWS
     LINUX /Image
     FDT /sun50i-h618-orangepi-zero3.dtb
-    APPEND earlycon console=tty1 console=ttyS0,115200 root=/dev/mmcblk0p2 rootwait rw cma=64M quiet splash loglevel=3 plymouth.ignore-serial-consoles vt.global_cursor_default=0 initcall_blacklist=panfrost_driver_init
+    APPEND earlycon console=tty1 console=ttyS0,115200 root=/dev/mmcblk0p2 rootwait rw cma=64M quiet splash loglevel=3 plymouth.ignore-serial-consoles vt.global_cursor_default=0 initcall_blacklist=panfrost_driver_init video=HDMI-A-1:1280x720@60
 EOF
 
 # Sediakan uEnv.txt di root partisi FAT32 untuk kompatibilitas firmware U-Boot legacy
@@ -96,7 +96,7 @@ fdtfile=sun50i-h618-orangepi-zero3.dtb
 rootdev=/dev/mmcblk0p2
 kernel_addr_r=0x40200000
 extraargs=cma=64M
-bootargs=earlycon console=tty1 console=ttyS0,115200 root=/dev/mmcblk0p2 rootwait rw cma=64M quiet splash loglevel=3 plymouth.ignore-serial-consoles vt.global_cursor_default=0 initcall_blacklist=panfrost_driver_init
+bootargs=earlycon console=tty1 console=ttyS0,115200 root=/dev/mmcblk0p2 rootwait rw cma=64M quiet splash loglevel=3 plymouth.ignore-serial-consoles vt.global_cursor_default=0 initcall_blacklist=panfrost_driver_init video=HDMI-A-1:1280x720@60
 bootcmd=fatload mmc 0:1 0x40200000 Image; fatload mmc 0:1 ${fdt_addr_r} ${fdtfile}; booti 0x40200000 - ${fdt_addr_r}
 EOF
 

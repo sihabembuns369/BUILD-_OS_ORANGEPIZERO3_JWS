@@ -1,5 +1,24 @@
 # CHANGELOG
 
+## [2026-11-14] Perbaikan Total Performa OpenGL ES2 (llvmpipe 4-Core NEON), IR Remote PC14, dan Wi-Fi Unisoc UWE5622
+- Apa yang diubah:
+  - **1. Perbaikan Lag/Patah-Patah & CPU 95% Single-Core (`SDL_render_sw` -> `opengles2` + `kms_swrast` `llvmpipe` 4-Thread)**:
+    - **Akar Masalah**: Di QEMU, `/usr/lib/aarch64-linux-gnu/dri/virtio_gpu_dri.so` sudah berupa symlink ke `kms_swrast_dri.so` dan variabel `LIBGL_ALWAYS_SOFTWARE=1` / `MESA_LOADER_DRIVER_OVERRIDE=kms_swrast` hanya diekspor di dalam blok `if` deteksi QEMU. Akibatnya, di board fisik Orange Pi Zero 3 (`sun4i-drm`), `libgbm` memuat `sun4i-drm_dri.so` (`kmsro`) yang gagal mencari `/dev/dri/renderD128` (`panfrost`), sehingga `SDL_CreateRenderer(..., SDL_RENDERER_ACCELERATED)` gagal dan jatuh ke fallback `SDL_CreateRenderer(window, -1, 0)` (`SDL_render_sw` 1-thread CPU murni tanpa OpenGL ES2, tanpa NEON JIT, dan tanpa VSync pada resolusi 1080p — terlihat di `top` memakai `95.0%` tepat 1 core sementara 3 core lain menganggur).
+    - **Solusi**:
+      - Membuat symlink `/usr/lib/aarch64-linux-gnu/dri/sun4i-drm_dri.so -> kms_swrast_dri.so` di `rootfs_compact.img` (identik dengan konfigurasi QEMU `virtio_gpu_dri.so`).
+      - Mengekspor `GBM_ALWAYS_SOFTWARE=1`, `LIBGL_ALWAYS_SOFTWARE=1`, `MESA_LOADER_DRIVER_OVERRIDE=kms_swrast`, `GALLIUM_DRIVER=llvmpipe`, `LP_NUM_THREADS=4`, dan `SDL_RENDER_DRIVER=opengles2` di `/opt/jws/jws` saat `/dev/dri/renderD128` tidak ada.
+      - Mengembalikan resolusi `video=HDMI-A-1:1280x720@60` di `boot.cmd`, `extlinux.conf`, dan `uEnv.txt`.
+      - Memperkecil tekstur aset yang terlalu besar (`logo.png` & `logo.jpg` dari `1024x1024` 4MB menjadi `128x128` 64KB, serta `masjid1.jpg` menjadi `640x360`) agar muat di dalam 512 KB L2 cache Cortex-A53 tanpa cache thrashing.
+  - **2. Perbaikan IR Remote Control pada GPIO Pin 78 (PC14)**:
+    - **Akar Masalah**: Selain efek frame-time >30ms pada 1080p `SDL_render_sw` yang membuat `SDL_KEYDOWN` dan `SDL_KEYUP` (jeda 30ms di `IRManager::PushKeyEvent`) tertelan di frame yang sama sebelum `ImGui::NewFrame()`, skrip `system-apply` sebelumnya memanggil `python3` (yang tidak terinstal di rootfs minimal) dan mengunci `IR_CHIP=/dev/gpiochip0`.
+    - **Solusi**: Menambahkan deteksi otomatis controller GPIO utama Allwinner H618 (`/sys/bus/platform/devices/*300b000.pinctrl/gpiochip*`) di `/usr/local/bin/system-apply` dan `/opt/jws/jws`, mengekspor `IR_CHIP` & `IR_LINE=78` langsung ke environment `jadwalsholat_imgui`, serta menyinkronkan `/opt/jws/settings.json` menggunakan `sed -i`.
+  - **3. Perbaikan Pemindaian & Koneksi Wi-Fi Onboard (Unisoc UWE5622 / AW859A `sprdwl_ng`)**:
+    - **Akar Masalah**: Di `rootfs_compact.img` sebelumnya belum terdapat firmware `/usr/lib/firmware/wcnmodem.bin` & `wifi_2355b001_1ant.ini`, modul `uwe5622_bsp_sdio` & `sprdwl_ng` belum dimuat di `/etc/modules`, serta binary `wpa_supplicant`, `wpa_cli`, `busybox`/`udhcpc` dan library `libnl-3.so.200`/`libnl-genl-3.so.200`/`libnl-route-3.so.200`/`libssl.so.1.1`/`libcrypto.so.1.1` belum tersedia.
+    - **Solusi**: Menyalin seluruh firmware Unisoc UWE5622, library pendukung, `wpa_supplicant`, `wpa_cli.real`, `busybox`, serta membuat wrapper `/usr/sbin/wpa_cli` (yang otomatis menyalakan `wlan0` + `wpa_supplicant` dan memberi jeda 2 detik saat `scan` agar hasil pemindaian frekuensi 2.4GHz/5GHz siap saat `scan_results` dipanggil oleh `WifiManager.hpp`) dan wrapper `/usr/sbin/udhcpc` non-blocking.
+- Alasan: Mengatasi CPU 95% single-core dan lag parah, memulihkan fungsi IR remote PC14, dan mengaktifkan pemindaian/koneksi Wi-Fi di Orange Pi Zero 3.
+- File/komponen terdampak: `overlay/opt/jws/jws`, `overlay/usr/local/bin/system-apply`, `overlay/etc/modules`, `overlay/etc/wpa_supplicant.conf`, `overlay/etc/wpa_supplicant/wpa_supplicant.conf`, `overlay/usr/sbin/wpa_cli`, `overlay/usr/sbin/udhcpc`, `overlay/usr/sbin/ifconfig`, `overlay/usr/sbin/route`, `overlay/usr/share/udhcpc/default.script`, `overlay/opt/jws/assets/`, `scripts/04_create_image.sh`, `CHANGELOG.md`.
+- Commit / tag: `fix(all): enable 4-core opengles2 llvmpipe on sun4i-drm, fix ir gpiochip auto-detect and uwe5622 wifi scan`
+
 ## [2026-11-14] Perbaikan CPU 100% & Remote IR: Aktifkan CPUFreq 1.5GHz dan Kembalikan VSync
 - Apa yang diubah:
   - **Akar Masalah Penggunaan CPU 100% & Remote IR Berhenti Bekerja Terpecahkan**:

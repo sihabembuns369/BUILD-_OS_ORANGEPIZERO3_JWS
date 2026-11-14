@@ -1,0 +1,13 @@
+#!/bin/sh
+# Wrapper udhcpc non-blocking untuk aplikasi JWS
+# Menunggu autentikasi WPA selesai (COMPLETED) lalu meminta IP via busybox udhcpc.
+
+for _ in 1 2 3 4 5 6 7 8; do
+    if /usr/sbin/wpa_cli.real -i wlan0 status 2>/dev/null | grep -q "wpa_state=COMPLETED"; then
+        break
+    fi
+    sleep 1
+done
+
+pkill -f "busybox udhcpc" 2>/dev/null || true
+exec /usr/bin/busybox udhcpc -s /usr/share/udhcpc/default.script -n -q -b "$@"

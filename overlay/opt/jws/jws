@@ -5,47 +5,89 @@
 APP_DIR="/opt/jws"
 cd "$APP_DIR" || exit 1
 
-export LD_LIBRARY_PATH="$APP_DIR/lib:$LD_LIBRARY_PATH"
+export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+export LD_LIBRARY_PATH="$APP_DIR/lib:/usr/lib/aarch64-linux-gnu:/lib/aarch64-linux-gnu:/lib:/usr/lib:$LD_LIBRARY_PATH"
 export SDL_AUDIODRIVER="${SDL_AUDIODRIVER:-dummy}"
 
-# 1. Aktifkan driver cpufreq Allwinner agar CPU clock naik dari 408MHz ke 1.5GHz maksimal
+# 1. Aktifkan driver cpufreq Allwinner agar CPU clock naik dari 408MHz ke 1.512GHz maksimal
 modprobe sun50i-cpufreq-nvmem 2>/dev/null || true
 for gov in /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor; do
     [ -f "$gov" ] && echo "performance" > "$gov" 2>/dev/null || true
 done
 
-# 2. VSync WAJIB ON agar rendering sinkron 60 FPS dan CPU tidur (sleep) antar-frame.
-# Ini mencegah CPU 100% dan menjaga akurasi timing sensor IR Remote!
-export SDL_RENDER_VSYNC=1
-export SDL_HINT_RENDER_BATCHING=1
+# 2. Deteksi otomatis chip GPIO utama (300b000.pinctrl) untuk sensor IR Remote PC14 (Line 78)
+for gc in /sys/bus/platform/devices/*300b000.pinctrl/gpiochip*; do
+    if [ -e "$gc" ]; then
+        export IR_CHIP="/dev/$(basename "$gc")"
+        break
+    fi
+done
+export IR_CHIP="${IR_CHIP:-/dev/gpiochip0}"
+export IR_LINE="${IR_LINE:-78}"
+chmod 666 /dev/gpiochip* 2>/dev/null || true
 
-# 3. Software rasterizer Mesa: gunakan 2 thread agar 2 core CPU lainnya bebas untuk ImGui & IR
-export LP_NUM_THREADS=2
-export GALLIUM_DRIVER=llvmpipe
-export MESA_GL_VERSION_OVERRIDE=2.1
-export MESA_GLES_VERSION_OVERRIDE=2.0
+if [ -f "$APP_DIR/settings.json" ]; then
+    sed -i \
+        -e "s|\"irChip\"[[:space:]]*:[[:space:]]*\"[^\"]*\"|\"irChip\": \"${IR_CHIP}\"|g" \
+        -e "s|\"irLine\"[[:space:]]*:[[:space:]]*[0-9]*|\"irLine\": ${IR_LINE}|g" \
+        "$APP_DIR/settings.json" 2>/dev/null || true
+fi
 
-# Mode framebuffer DRM/KMS jika berjalan langsung di tty tanpa server display X11/Wayland
+# 3. Inisialisasi Wi-Fi Unisoc UWE5622 (sprdwl_ng) & wpa_supplicant di background agar tidak menahan boot UI
+(
+    if [ -f /proc/device-tree/model ] && tr -d '\0' < /proc/device-tree/model | grep -qi "OrangePi"; then
+        modprobe uwe5622_bsp_sdio 2>/dev/null || true
+        modprobe sprdwl_ng 2>/dev/null || true
+        for _ in 1 2 3 4 5; do
+            [ -d /sys/class/net/wlan0 ] && break
+            sleep 1
+        done
+        if [ -d /sys/class/net/wlan0 ]; then
+            ip link set wlan0 up 2>/dev/null || /usr/bin/busybox ifconfig wlan0 up 2>/dev/null || true
+            mkdir -p /var/run/wpa_supplicant /etc/wpa_supplicant
+            if [ ! -f /etc/wpa_supplicant/wpa_supplicant.conf ]; then
+                printf "ctrl_interface=/var/run/wpa_supplicant\nupdate_config=1\n" > /etc/wpa_supplicant/wpa_supplicant.conf
+            fi
+            if ! pgrep -x wpa_supplicant >/dev/null 2>&1; then
+                rm -rf /var/run/wpa_supplicant/* 2>/dev/null || true
+                /usr/sbin/wpa_supplicant -B -i wlan0 -Dnl80211 -c /etc/wpa_supplicant/wpa_supplicant.conf >/dev/null 2>&1 || true
+                sleep 1
+            fi
+            /usr/sbin/wpa_cli.real -i wlan0 scan >/dev/null 2>&1 || true
+        fi
+    fi
+) &
+
+# 4. Konfigurasi Rendering KMSDRM + OpenGL ES 2.0 + VSync
 if [ -z "$DISPLAY" ] && [ -z "$WAYLAND_DISPLAY" ]; then
     export SDL_VIDEODRIVER=kmsdrm
 fi
+export SDL_RENDER_DRIVER=opengles2
+export SDL_RENDER_VSYNC=1
+export SDL_HINT_RENDER_BATCHING=1
 
-# Deteksi lingkungan QEMU: gunakan VirGL 3D native jika tersedia (virtio-gpu-gl-pci),
-# atau fallback ke software kms_swrast jika hanya virtio-gpu 2D tanpa VirGL.
-if [ -d "/sys/bus/pci/drivers/virtio-pci" ] || [ -d "/sys/module/virtio_gpu" ] || grep -q "QEMU" /proc/cpuinfo 2>/dev/null; then
-    VIRGL_ACTIVE=0
-    for feat in /sys/bus/virtio/drivers/virtio_gpu/virtio*/features; do
-        if [ -r "$feat" ] && [ "$(head -c 1 "$feat")" = "1" ]; then
-            VIRGL_ACTIVE=1
-            break
-        fi
-    done
-    if [ "$VIRGL_ACTIVE" -eq 0 ]; then
-        export LIBGL_ALWAYS_SOFTWARE=1
-        export MESA_LOADER_DRIVER_OVERRIDE=kms_swrast
-        export GALLIUM_DRIVER=llvmpipe
-        export LP_NUM_THREADS=1
+# Jika GPU render node (/dev/dri/renderD128) tidak aktif (mis. panfrost di-blacklist atau QEMU 2D),
+# WAJIB aktifkan GBM_ALWAYS_SOFTWARE=1 & kms_swrast (llvmpipe 4-thread ARM NEON JIT) agar
+# SDL_CreateRenderer tidak gagal dan tidak jatuh ke fallback SDL_render_sw (1-thread lambat).
+HAS_HW_GL=0
+if [ -e /dev/dri/renderD128 ]; then
+    HAS_HW_GL=1
+fi
+for feat in /sys/bus/virtio/drivers/virtio_gpu/virtio*/features; do
+    if [ -r "$feat" ] && [ "$(head -c 1 "$feat")" = "1" ]; then
+        HAS_HW_GL=1
+        break
     fi
+done
+
+if [ "$HAS_HW_GL" -eq 0 ]; then
+    export GBM_ALWAYS_SOFTWARE=1
+    export LIBGL_ALWAYS_SOFTWARE=1
+    export MESA_LOADER_DRIVER_OVERRIDE=kms_swrast
+    export GALLIUM_DRIVER=llvmpipe
+    export LP_NUM_THREADS=4
+    export MESA_GL_VERSION_OVERRIDE=2.1
+    export MESA_GLES_VERSION_OVERRIDE=2.0
 fi
 
 # Pastikan MIN_DURATION dari /boot/splash.conf terpenuhi sebelum menutup splash
@@ -76,9 +118,9 @@ if [ -e /run/plymouth/pid ] || /usr/bin/plymouth --ping 2>/dev/null; then
 fi
 
 # Pastikan perangkat input dan tty1 dapat diakses penuh oleh SDL2 evdev
-sudo /bin/chmod 666 /dev/input/event* /dev/input/mice /dev/input/mouse* /dev/tty1 /dev/tty0 2>/dev/null || true
+chmod 666 /dev/input/event* /dev/input/mice /dev/input/mouse* /dev/tty1 /dev/tty0 /dev/dri/* 2>/dev/null || true
 
-echo "[JWS] Meluncurkan aplikasi jadwal salat ImGui..."
+echo "[JWS] Meluncurkan aplikasi jadwal salat ImGui (IR_CHIP=${IR_CHIP}, IR_LINE=${IR_LINE})..."
 if [ -r /dev/tty1 ]; then
     exec "$APP_DIR/jadwalsholat_imgui" "$@" </dev/tty1
 else

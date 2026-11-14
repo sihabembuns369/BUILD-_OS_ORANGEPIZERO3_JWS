@@ -1,0 +1,27 @@
+#!/bin/sh
+[ -z "$1" ] && echo "Error: should be called from udhcpc" && exit 1
+
+BB="/usr/bin/busybox"
+[ ! -x "$BB" ] && BB="busybox"
+
+case "$1" in
+    deconfig)
+        $BB ifconfig "$interface" 0.0.0.0 2>/dev/null || ip addr flush dev "$interface" 2>/dev/null || true
+        ;;
+    bound|renew)
+        $BB ifconfig "$interface" "$ip" netmask "${subnet:-$mask}" 2>/dev/null || true
+        if [ -n "$router" ]; then
+            while $BB route del default gw 0.0.0.0 dev "$interface" 2>/dev/null; do :; done
+            for i in $router; do
+                $BB route add default gw "$i" dev "$interface" 2>/dev/null || ip route replace default via "$i" dev "$interface" 2>/dev/null || true
+            done
+        fi
+        if [ -n "$dns" ]; then
+            : > /etc/resolv.conf
+            for i in $dns; do
+                echo "nameserver $i" >> /etc/resolv.conf
+            done
+        fi
+        ;;
+esac
+exit 0

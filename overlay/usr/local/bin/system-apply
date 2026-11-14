@@ -48,7 +48,6 @@ fi
 
 # 2. Atur SSH Server
 if [ "${SSH_ENABLED,,}" = "yes" ]; then
-    # Validasi port
     if ! [[ "$SSH_PORT" =~ ^[0-9]+$ ]] || [ "$SSH_PORT" -lt 1 ] || [ "$SSH_PORT" -gt 65535 ]; then
         warn "Port SSH tidak valid ($SSH_PORT), menggunakan port 22."
         SSH_PORT=22
@@ -69,7 +68,16 @@ PubkeyAuthentication yes
 EOF
 fi
 
-# 3. Atur WiFi Headless jika ada wifi.conf
+# 3. Pastikan konfigurasi dasar wpa_supplicant tersedia & terapkan wifi.conf bila ada
+mkdir -p /etc/wpa_supplicant /var/run/wpa_supplicant
+WPA_SUP_FILE="/etc/wpa_supplicant/wpa_supplicant.conf"
+if [ ! -f "$WPA_SUP_FILE" ]; then
+    cat <<EOF > "$WPA_SUP_FILE"
+ctrl_interface=/var/run/wpa_supplicant
+update_config=1
+EOF
+fi
+
 if [ -f "$WIFI_CONF" ]; then
     WIFI_ENABLED="no"
     WIFI_SSID=""
@@ -79,10 +87,8 @@ if [ -f "$WIFI_CONF" ]; then
     
     if [ "${WIFI_ENABLED,,}" = "yes" ] && [ -n "$WIFI_SSID" ]; then
         log "Mengonfigurasi WiFi headless untuk SSID: $WIFI_SSID..."
-        WPA_SUP_FILE="/etc/wpa_supplicant/wpa_supplicant.conf"
-        mkdir -p /etc/wpa_supplicant
         cat <<EOF > "$WPA_SUP_FILE"
-ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev
+ctrl_interface=/var/run/wpa_supplicant
 update_config=1
 country=${WIFI_COUNTRY:-ID}
 
@@ -94,27 +100,35 @@ EOF
         chmod 600 "$WPA_SUP_FILE"
     fi
 fi
+cp -f "$WPA_SUP_FILE" /etc/wpa_supplicant.conf 2>/dev/null || true
 
-# 4. Sinkronisasi Konfigurasi Infra Red JWS (/boot/system.conf -> /opt/jws/settings.json)
+# 4. Deteksi otomatis GPIO controller utama Allwinner H618 (300b000.pinctrl) untuk PC14 (Line 78)
 IR_ENABLED="${IR_ENABLED:-yes}"
-IR_CHIP="${IR_CHIP:-/dev/gpiochip0}"
 IR_LINE="${IR_LINE:-78}"
+DETECTED_PIO_CHIP=""
+for gc in /sys/bus/platform/devices/*300b000.pinctrl/gpiochip*; do
+    if [ -e "$gc" ]; then
+        DETECTED_PIO_CHIP="/dev/$(basename "$gc")"
+        break
+    fi
+done
+if [ -n "$DETECTED_PIO_CHIP" ] && [ "${IR_LINE:-78}" -ge 32 ]; then
+    IR_CHIP="$DETECTED_PIO_CHIP"
+else
+    IR_CHIP="${IR_CHIP:-/dev/gpiochip0}"
+fi
 
 if [ -f "/opt/jws/settings.json" ]; then
-    log "Sinkronisasi pin IR: chip=${IR_CHIP}, line=${IR_LINE}, enabled=${IR_ENABLED}..."
-    python3 -c "
-import json
-try:
-    with open('/opt/jws/settings.json', 'r') as f:
-        cfg = json.load(f)
-    cfg['irChip'] = '${IR_CHIP}'
-    cfg['irLine'] = int('${IR_LINE}')
-    cfg['irEnabled'] = True if '${IR_ENABLED,,}' in ['yes', '1', 'true'] else False
-    with open('/opt/jws/settings.json', 'w') as f:
-        json.dump(cfg, f, indent=2)
-except Exception as e:
-    pass
-" 2>/dev/null || true
+    IR_BOOL="true"
+    case "${IR_ENABLED,,}" in
+        no|0|false) IR_BOOL="false" ;;
+    esac
+    log "Sinkronisasi pin IR: chip=${IR_CHIP}, line=${IR_LINE}, enabled=${IR_BOOL}..."
+    sed -i \
+        -e "s|\"irChip\"[[:space:]]*:[[:space:]]*\"[^\"]*\"|\"irChip\": \"${IR_CHIP}\"|g" \
+        -e "s|\"irLine\"[[:space:]]*:[[:space:]]*[0-9]*|\"irLine\": ${IR_LINE}|g" \
+        -e "s|\"irEnabled\"[[:space:]]*:[[:space:]]*[a-z]*|\"irEnabled\": ${IR_BOOL}|g" \
+        /opt/jws/settings.json 2>/dev/null || true
 fi
 
 log "System apply selesai."
