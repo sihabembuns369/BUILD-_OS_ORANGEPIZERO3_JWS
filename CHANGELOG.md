@@ -1,5 +1,21 @@
 # CHANGELOG
 
+## [2026-11-14] Perbaikan HDMI Stuck Splash & Pemulihan Konsol Serial Interaktif PuTTY
+- Apa yang diubah:
+  - **Mengatasi Layar HDMI Terjebak di Splash Screen**:
+    - Ditemukan akar masalah aplikasi JWS crash berulang (infinite restart loop tiap 3 detik): binary `libSDL2-2.0.so.0` bawaan aplikasi tidak memiliki driver ALSA bawaan, sehingga deklarasi `SDL_AUDIODRIVER=alsa` menyebabkan fatal crash `Fatal Error SDL_Init: Audio target 'alsa' not available`.
+    - Mengembalikan `SDL_AUDIODRIVER=dummy` pada `jws.service` dan `/opt/jws/jws`.
+    - Memperbaiki penutupan Plymouth: mengganti perintah `/usr/bin/plymouth quit --retain-splash` menjadi `/usr/bin/plymouth quit` murni agar Plymouth melepaskan kepemilikan DRM master `/dev/dri/card0`, sehingga SDL2 KMSDRM dapat langsung membuka layar HDMI tanpa konflik KMSDRM.
+  - **Pemulihan Konsol Serial UART PuTTY (Streaming Log & Login Interaktif)**:
+    - Menghapus parameter `quiet` dan `loglevel=3` dari `bootargs` di U-Boot `boot.cmd`, `extlinux.conf`, dan `uEnv.txt`. Log booting kernel dan status systemd kini mengalir secara transparan ke PuTTY tanpa terhenti di `Booting <NULL>`.
+    - Menghapus `timeout.conf` yang sebelumnya mematikan `serial-getty@ttyS0` setelah 1 detik.
+    - Mengaktifkan autologin permanen ke user `jws` pada `serial-getty@ttyS0` (`115200 8N1 vt100`).
+  - **Deployment Windows Diperbarui**:
+    - Image `orangepi_zero3_jws.img`, zip `orangepi_zero3_jws.zip`, dan folder `BOOT_FILES_DIRECT_COPY` di `C:\Users\embun\Documents\ARMBIAN\JWS_NEW_VERSION\` telah diperbarui dan siap di-burn ulang.
+- Alasan: Mengatasi freeze visual pada splash screen HDMI dan mengaktifkan terminal serial UART PuTTY agar user dapat melakukan interaksi keyboard dan debugging.
+- File/komponen terdampak: `overlay/opt/jws/jws`, `overlay/etc/systemd/system/jws.service`, `overlay/etc/systemd/system/serial-getty@ttyS0.service.d/autologin.conf`, `scripts/04_create_image.sh`, `CHANGELOG.md`.
+- Commit / tag: `fix(jws): perbaiki audio dummy agar jws tidak crash dan pulihkan serial console interaktif tanpa quiet`
+
 ## [2026-11-14] Optimasi Hardware Asli Orange Pi Zero 3: Perbaikan Pin IR Remote PC14, Root Privilege, dan Akselerasi GPU 60 FPS
 - Apa yang diubah:
   - **Perbaikan Pin IR Remote Control (VS1838B / TSOP4838) pada Header Pin 18 (PC14 / GPIO 78)**:

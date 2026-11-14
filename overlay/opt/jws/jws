@@ -6,7 +6,7 @@ APP_DIR="/opt/jws"
 cd "$APP_DIR" || exit 1
 
 export LD_LIBRARY_PATH="$APP_DIR/lib:$LD_LIBRARY_PATH"
-export SDL_AUDIODRIVER="${SDL_AUDIODRIVER:-alsa}"
+export SDL_AUDIODRIVER="${SDL_AUDIODRIVER:-dummy}"
 
 # Set CPU governor ke performance untuk kelancaran rendering UI 60 FPS
 for gov in /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor; do
@@ -67,9 +67,9 @@ if [ "${UPTIME_SEC:-10}" -lt "$MIN_DUR" ]; then
     sleep $((MIN_DUR - UPTIME_SEC))
 fi
 
-# Jika plymouth masih berjalan (mis. dijalankan manual), lepaskan DRM master Plymouth
-if [ -e /run/plymouth/pid ]; then
-    sudo /usr/bin/plymouth quit --retain-splash 2>/dev/null || /usr/bin/plymouth quit --retain-splash 2>/dev/null || true
+# Jika plymouth masih berjalan, tutup agar Plymouth melepaskan DRM master ke SDL2
+if [ -e /run/plymouth/pid ] || /usr/bin/plymouth --ping 2>/dev/null; then
+    /usr/bin/plymouth quit 2>/dev/null || true
 fi
 
 # Pastikan perangkat input dan tty1 dapat diakses penuh oleh SDL2 evdev
