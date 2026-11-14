@@ -95,4 +95,26 @@ EOF
     fi
 fi
 
+# 4. Sinkronisasi Konfigurasi Infra Red JWS (/boot/system.conf -> /opt/jws/settings.json)
+IR_ENABLED="${IR_ENABLED:-yes}"
+IR_CHIP="${IR_CHIP:-/dev/gpiochip0}"
+IR_LINE="${IR_LINE:-78}"
+
+if [ -f "/opt/jws/settings.json" ]; then
+    log "Sinkronisasi pin IR: chip=${IR_CHIP}, line=${IR_LINE}, enabled=${IR_ENABLED}..."
+    python3 -c "
+import json
+try:
+    with open('/opt/jws/settings.json', 'r') as f:
+        cfg = json.load(f)
+    cfg['irChip'] = '${IR_CHIP}'
+    cfg['irLine'] = int('${IR_LINE}')
+    cfg['irEnabled'] = True if '${IR_ENABLED,,}' in ['yes', '1', 'true'] else False
+    with open('/opt/jws/settings.json', 'w') as f:
+        json.dump(cfg, f, indent=2)
+except Exception as e:
+    pass
+" 2>/dev/null || true
+fi
+
 log "System apply selesai."

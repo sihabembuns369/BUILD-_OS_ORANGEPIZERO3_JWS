@@ -6,16 +6,16 @@ Conflicts=getty@tty1.service
 [Service]
 Type=simple
 Nice=-10
-User=jws
-Group=jws
+User=root
+Group=root
 SupplementaryGroups=video render input audio tty dialout
 StandardOutput=journal
 StandardError=journal
 Environment=SDL_VIDEODRIVER=kmsdrm
-Environment=SDL_AUDIODRIVER=dummy
-Environment=XDG_RUNTIME_DIR=/run/user/1000
+Environment=SDL_AUDIODRIVER=alsa
+Environment=XDG_RUNTIME_DIR=/tmp
 
-ExecStartPre=+/bin/sh -c 'chgrp -R video /dev/dri /dev/fb* 2>/dev/null || true; chmod -R g+rw /dev/dri /dev/fb* /dev/tty1 2>/dev/null || true; chgrp -R input /dev/input 2>/dev/null || true; chmod -R g+rw /dev/input 2>/dev/null || true; /usr/bin/plymouth quit --retain-splash 2>/dev/null || true'
+ExecStartPre=+/bin/sh -c 'chmod -R 666 /dev/dri/* /dev/fb* /dev/input/* /dev/tty1 /dev/gpiochip* 2>/dev/null || true; /usr/bin/plymouth quit --retain-splash 2>/dev/null || true'
 ExecStart=/usr/local/bin/jws-app
 Restart=always
 RestartSec=3

@@ -23,3 +23,8 @@ TEMP_OFF=50                  # Matikan kipas saat suhu CPU <= 50 C
 RELAY_ENABLED=yes            # yes/no (kontrol relay amplifier)
 RELAY_PIN=12                 # Header Pin 12 (PC6)
 RELAY_ACTIVE_HIGH=yes        # yes/no (yes jika relay aktif HIGH, no jika aktif LOW)
+
+# Infra Red (IR) Remote Control (VS1838B / TSOP4838)
+IR_ENABLED=yes               # yes/no (aktifkan kontrol remote IR)
+IR_CHIP=/dev/gpiochip0       # controller GPIO utama SoC Allwinner H618 (0300b000.pinctrl)
+IR_LINE=78                   # Pin GPIO 78 = PC14 (Header Pin 18)

@@ -1,5 +1,25 @@
 # CHANGELOG
 
+## [2026-11-14] Optimasi Hardware Asli Orange Pi Zero 3: Perbaikan Pin IR Remote PC14, Root Privilege, dan Akselerasi GPU 60 FPS
+- Apa yang diubah:
+  - **Perbaikan Pin IR Remote Control (VS1838B / TSOP4838) pada Header Pin 18 (PC14 / GPIO 78)**:
+    - Menjawab pertanyaan pengguna mengenai `IR_CHIP`: Sebelumnya pada `settings.json` tertulis `"irChip": "/dev/gpiochip1"`. Pada arsitektur Allwinner H618, `/dev/gpiochip1` adalah controller `r_pio` yang hanya memiliki 2 pin (PL0 dan PL1), sedangkan pin 78 (PC14) berada di controller GPIO utama (`0300b000.pinctrl`) yaitu **/dev/gpiochip0**. Karena itu panggilan `gpiod_chip_request_lines` sebelumnya gagal (*out of range*).
+    - Memperbarui `settings.json` menjadi: `"irChip": "/dev/gpiochip0"`, `"irLine": 78`, `"irEnabled": true`.
+    - Menambahkan sinkronisasi otomatis pin IR di `/usr/local/bin/system-apply` dari `/boot/system.conf` (`IR_CHIP=/dev/gpiochip0`, `IR_LINE=78`, `IR_ENABLED=yes`) agar dapat dikonfigurasi langsung dari PC Windows.
+  - **Jalankan Aplikasi JWS Sebagai Root**:
+    - Mengubah `jws.service` menjadi `User=root` dan `Group=root` dengan `XDG_RUNTIME_DIR=/tmp`.
+    - Memberikan akses tanpa batas (*unhindered privileges*) ke driver DRM `/dev/dri/*`, GPIO character device `/dev/gpiochip0`, input device evdev `/dev/input/*`, dan konsol tty1.
+  - **Eliminasi Lag dan Frame Stuttering (Performa Halus 60 FPS)**:
+    - Re-enable akselerasi GPU hardware Mali-G31 (`gpu@1800000` status `okay`) dan menghapus blacklist `panfrost_driver_init` pada bootargs setelah emergency thermal shutdown teratasi.
+    - Menambahkan optimasi CPU scaling governor ke `performance` (1.5 GHz) pada launcher `/opt/jws/jws`.
+    - Mengaktifkan optimasi rendering SDL2 KMSDRM: `SDL_RENDER_VSYNC=1`, `SDL_HINT_RENDER_BATCHING=1`, `SDL_HINT_FRAMEBUFFER_ACCELERATION=1`.
+  - **Deployment Windows Diperbarui**:
+    - Image `orangepi_zero3_jws.img`, file zip `orangepi_zero3_jws.zip`, dan berkas `BOOT_FILES_DIRECT_COPY` di `C:\Users\embun\Documents\ARMBIAN\JWS_NEW_VERSION\` telah diperbarui.
+- Alasan: Memenuhi permintaan pengguna untuk menjalankan aplikasi sebagai root, memperbaiki deteksi kontrol Infra Red di PC14, dan mengatasi lag/patah-patah pada hardware asli Orange Pi Zero 3.
+- File/komponen terdampak: `overlay/opt/jws/settings.json`, `overlay/etc/systemd/system/jws.service`, `overlay/opt/jws/jws`, `overlay/usr/local/bin/system-apply`, `configs/system.conf.example`, `scripts/04_create_image.sh`, `output/sun50i-h618-orangepi-zero3.dtb`, `CHANGELOG.md`.
+- Commit / tag: `feat(jws): perbaiki pin IR /dev/gpiochip0 pin 78, jalankan service sebagai root, dan optimasi performa 60 FPS`
+
+
 ## [2026-11-14] Perbaikan False Alarm Thermal Shutdown: Eliminasi Emergency Power Down pada Detik 1.2
 - Apa yang diubah:
   - **Mengatasi Emergency Hardware Protection Shutdown (`critical temperature reached, shutting down`)**:
