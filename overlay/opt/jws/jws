@@ -18,9 +18,17 @@ export SDL_RENDER_VSYNC=1
 export SDL_HINT_RENDER_BATCHING=1
 export SDL_HINT_FRAMEBUFFER_ACCELERATION=1
 
-# Maksimalkan multithreading software rasterizer Mesa ke seluruh 4 core CPU
-export LP_NUM_THREADS=4
-export GALLIUM_DRIVER=llvmpipe
+# Cek ketersediaan akselerasi GPU hardware (Panfrost Mali-G31 di board atau VirGL di QEMU)
+if [ -e /dev/dri/renderD128 ]; then
+    # Hardware GPU aktif: biarkan Mesa menggunakan driver akselerasi native (panfrost_dri.so)
+    unset GALLIUM_DRIVER
+    unset MESA_LOADER_DRIVER_OVERRIDE
+    unset LIBGL_ALWAYS_SOFTWARE
+else
+    # Fallback ke multithreaded software rasterizer jika tidak ada GPU hardware
+    export GALLIUM_DRIVER=llvmpipe
+    export LP_NUM_THREADS=2
+fi
 
 # Mode framebuffer DRM/KMS jika berjalan langsung di tty tanpa server display X11/Wayland
 if [ -z "$DISPLAY" ] && [ -z "$WAYLAND_DISPLAY" ]; then
