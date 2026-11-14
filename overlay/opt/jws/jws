@@ -18,6 +18,10 @@ export SDL_RENDER_VSYNC=1
 export SDL_HINT_RENDER_BATCHING=1
 export SDL_HINT_FRAMEBUFFER_ACCELERATION=1
 
+# Maksimalkan multithreading software rasterizer Mesa ke seluruh 4 core CPU
+export LP_NUM_THREADS=4
+export GALLIUM_DRIVER=llvmpipe
+
 # Mode framebuffer DRM/KMS jika berjalan langsung di tty tanpa server display X11/Wayland
 if [ -z "$DISPLAY" ] && [ -z "$WAYLAND_DISPLAY" ]; then
     export SDL_VIDEODRIVER=kmsdrm
