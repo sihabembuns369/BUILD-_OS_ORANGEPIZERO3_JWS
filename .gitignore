@@ -42,6 +42,8 @@ id_ed25519
 *key
 *key.pub
 !ssh/
+overlay/etc/shadow
+overlay/etc/shadow-
 
 # Misc
 *.swp

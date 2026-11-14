@@ -1,0 +1,54 @@
+#!/usr/bin/env bash
+# /usr/local/bin/jws-relay-control
+# Kontrol GPIO output Relay Pengendali Amplifier Eksternal
+# Default Pin 11 (PC6 / GPIO 70 pada Orange Pi Zero 3)
+
+set -e
+
+SYS_CONF="/boot/system.conf"
+RELAY_PIN=70  # PC6 = (2 * 32) + 6 = 70
+RELAY_ACTIVE_HIGH=1
+
+if [ -f "$SYS_CONF" ]; then
+    eval "$(grep -E '^RELAY_[A-Z_]+=' "$SYS_CONF" | sed 's/\r$//')"
+fi
+
+# Export GPIO jika menggunakan sysfs gpio legacy atau gpiod
+setup_gpio() {
+    if [ ! -d "/sys/class/gpio/gpio${RELAY_PIN}" ] && [ -d "/sys/class/gpio" ]; then
+        echo "${RELAY_PIN}" > /sys/class/gpio/export 2>/dev/null || true
+        echo "out" > "/sys/class/gpio/gpio${RELAY_PIN}/direction" 2>/dev/null || true
+    fi
+}
+
+case "$1" in
+    on|start)
+        setup_gpio
+        VAL=1
+        [ "$RELAY_ACTIVE_HIGH" != "yes" ] && [ "$RELAY_ACTIVE_HIGH" != "1" ] && VAL=0
+        if [ -d "/sys/class/gpio/gpio${RELAY_PIN}" ]; then
+            echo "$VAL" > "/sys/class/gpio/gpio${RELAY_PIN}/value" 2>/dev/null || true
+        fi
+        echo "[jws-relay] Amplifier ON"
+        ;;
+    off|stop)
+        setup_gpio
+        VAL=0
+        [ "$RELAY_ACTIVE_HIGH" != "yes" ] && [ "$RELAY_ACTIVE_HIGH" != "1" ] && VAL=1
+        if [ -d "/sys/class/gpio/gpio${RELAY_PIN}" ]; then
+            echo "$VAL" > "/sys/class/gpio/gpio${RELAY_PIN}/value" 2>/dev/null || true
+        fi
+        echo "[jws-relay] Amplifier OFF"
+        ;;
+    status)
+        if [ -d "/sys/class/gpio/gpio${RELAY_PIN}" ]; then
+            cat "/sys/class/gpio/gpio${RELAY_PIN}/value"
+        else
+            echo "offline"
+        fi
+        ;;
+    *)
+        echo "Usage: $0 {on|off|status}"
+        exit 1
+        ;;
+esac

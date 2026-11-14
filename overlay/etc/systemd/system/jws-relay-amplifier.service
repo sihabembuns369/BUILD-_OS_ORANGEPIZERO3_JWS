@@ -1,0 +1,13 @@
+[Unit]
+Description=JWS External Amplifier Relay Control Service
+After=local-fs.target systemd-modules-load.service
+Before=jws.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/bin/jws-relay-control off
+ExecStop=/usr/local/bin/jws-relay-control off
+
+[Install]
+WantedBy=multi-user.target

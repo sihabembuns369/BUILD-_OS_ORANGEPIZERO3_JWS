@@ -25,13 +25,13 @@ fi
 RES_X="${RES_X:-1280}"
 RES_Y="${RES_Y:-720}"
 
-# Pilihan mode display: jika tidak ada DISPLAY (headless/ssh), fallback ke -display none
+# Pilihan mode display: jika ada DISPLAY, buka window GUI SDL/GTK; jika tidak ada (headless/SSH), buka VNC di localhost:5901
 DISPLAY_OPTS=""
 if [ -n "$DISPLAY" ]; then
     DISPLAY_OPTS="-device virtio-gpu-gl-pci,xres=${RES_X},yres=${RES_Y} -display sdl,gl=on"
 else
-    echo "Peringatan: Variabel DISPLAY tidak diset. Menjalankan dalam mode headless (-display none)."
-    DISPLAY_OPTS="-device virtio-gpu-pci,xres=${RES_X},yres=${RES_Y} -display none"
+    echo "Peringatan: Variabel DISPLAY tidak diset. Menjalankan dalam mode headless dengan VNC aktif di 127.0.0.1:5901."
+    DISPLAY_OPTS="-device virtio-gpu-pci,xres=${RES_X},yres=${RES_Y} -display vnc=127.0.0.1:1"
 fi
 
 KERNEL_OPTS=""
@@ -44,9 +44,15 @@ if ss -tulpn | grep -q ":2222 "; then
     SSH_PORT=22220
 fi
 
+WEB_PORT="${WEB_PORT:-8080}"
+if ss -tulpn 2>/dev/null | grep -q ":8080 "; then
+    WEB_PORT=28080
+fi
+
 echo "==> Menjalankan QEMU aarch64..."
 echo "==> Image   : $IMG_FILE"
-echo "==> SSH Port: $SSH_PORT (ssh -p $SSH_PORT jws@localhost)"
+echo "==> SSH Port: $SSH_PORT (ssh -p $SSH_PORT jws@localhost, password: jws)"
+echo "==> Web JWS : http://localhost:${WEB_PORT}"
 echo "==> Keluar  : Tekan Ctrl+A lalu X"
 
 # Workaround bug QEMU 6.x + VirGL: setelah guest reboot, konteks virglrenderer di host
@@ -88,7 +94,7 @@ while true; do
     -device virtio-keyboard-pci \
     -device virtio-mouse-pci \
     -rtc base=localtime \
-    -netdev user,id=net0,hostfwd=tcp::${SSH_PORT}-:22 \
+    -netdev user,id=net0,hostfwd=tcp::${SSH_PORT}-:22,hostfwd=tcp::${WEB_PORT}-:8080 \
     -device virtio-net-pci,netdev=net0 \
     ${REBOOT_OPTS} || RC=$?
 

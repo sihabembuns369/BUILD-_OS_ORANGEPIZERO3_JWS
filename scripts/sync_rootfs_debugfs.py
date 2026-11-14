@@ -55,6 +55,10 @@ for host_path, target_path in regular_files:
     cmds.append(f"write {host_path} {target_path}")
     if "/bin/" in target_path or "/sbin/" in target_path or target_path.endswith(".sh") or target_path == "/opt/jws/jws" or target_path.endswith("jadwalsholat_imgui") or "/opt/jws/yt-dlp" in target_path or target_path.endswith(".so"):
         cmds.append(f"set_inode_field {target_path} mode 0100755")
+    elif "ssh_host_" in target_path and target_path.endswith("_key"):
+        cmds.append(f"set_inode_field {target_path} mode 0100600")
+    elif target_path == "/etc/shadow":
+        cmds.append(f"set_inode_field {target_path} mode 0100600")
     else:
         cmds.append(f"set_inode_field {target_path} mode 0100644")
 

@@ -15,11 +15,15 @@ log() {
 }
 
 # 1. First boot SSH host keys check & generate
+mkdir -p /run/sshd /etc/ssh
+chmod 0755 /run/sshd 2>/dev/null || true
+
 if [ ! -f /etc/ssh/ssh_host_rsa_key ] && [ ! -f /etc/ssh/ssh_host_ed25519_key ]; then
     log "Host key SSH belum ada (first boot terdeteksi). Membuat host key baru secara independen..."
     ssh-keygen -A || true
     log "Host key SSH berhasil dibuat."
 fi
+chmod 600 /etc/ssh/ssh_host_*_key 2>/dev/null || true
 
 # 2. Sinkronisasi authorized_keys dari /boot jika ada
 if [ -f "$BOOT_KEYS" ] && id -u "$USER_NAME" >/dev/null 2>&1; then
