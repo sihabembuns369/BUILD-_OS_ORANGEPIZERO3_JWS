@@ -13,22 +13,12 @@ for gov in /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor; do
     [ -f "$gov" ] && echo "performance" > "$gov" 2>/dev/null || true
 done
 
-# Optimasi rendering SDL2 KMSDRM agar 60 FPS halus tanpa lag/stutter
-export SDL_RENDER_VSYNC=1
+# Optimasi rendering SDL2 & Mesa agar lancar dan tidak patah-patah
 export SDL_HINT_RENDER_BATCHING=1
-export SDL_HINT_FRAMEBUFFER_ACCELERATION=1
-
-# Cek ketersediaan akselerasi GPU hardware (Panfrost Mali-G31 di board atau VirGL di QEMU)
-if [ -e /dev/dri/renderD128 ]; then
-    # Hardware GPU aktif: biarkan Mesa menggunakan driver akselerasi native (panfrost_dri.so)
-    unset GALLIUM_DRIVER
-    unset MESA_LOADER_DRIVER_OVERRIDE
-    unset LIBGL_ALWAYS_SOFTWARE
-else
-    # Fallback ke multithreaded software rasterizer jika tidak ada GPU hardware
-    export GALLIUM_DRIVER=llvmpipe
-    export LP_NUM_THREADS=2
-fi
+export LP_NUM_THREADS=2
+export GALLIUM_DRIVER=llvmpipe
+export MESA_GL_VERSION_OVERRIDE=2.1
+export MESA_GLES_VERSION_OVERRIDE=2.0
 
 # Mode framebuffer DRM/KMS jika berjalan langsung di tty tanpa server display X11/Wayland
 if [ -z "$DISPLAY" ] && [ -z "$WAYLAND_DISPLAY" ]; then

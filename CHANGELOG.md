@@ -1,5 +1,21 @@
 # CHANGELOG
 
+## [2026-11-14] Perbaikan Freeze Booting: Isolasi Panfrost GPU, Hapus Hardcoded Video Mode, dan Optimasi Mesa CPU
+- Apa yang diubah:
+  - **Mengatasi Freeze/Hang Total di `Booting <NULL>` dan Layar HDMI Blank Hitam**:
+    - Terkonfirmasi bahwa driver GPU `panfrost` pada kernel Linux upstream menyebabkan hard lockup pada bus interkoneksi AXI Allwinner H618 saat probe awal.
+    - Menonaktifkan kembali `gpu@1800000` (`status = "disabled"`) dan mengembalikan `initcall_blacklist=panfrost_driver_init` pada kernel bootargs.
+    - Menghapus parameter `video=HDMI-A-1:1280x720@60` dari bootargs karena memaksa mode yang menyebabkan controller DWC-HDMI TX gagal inisialisasi pada beberapa monitor (black screen). Kini resolusi dinegosiasikan secara dinamis dan aman via EDID.
+  - **Optimasi Stutter/Lag pada Software Rendering (Anti Patah-Patah)**:
+    - Menghapus `SDL_RENDER_VSYNC=1`: VSync pada KMSDRM software rasterizer menyebabkan frame rate terpotong dari 60 FPS ke 30/15 FPS setiap kali render time melebihi 16ms, yang menimbulkan efek patah-patah visual parah.
+    - Menyetel `LP_NUM_THREADS=2`: Membatasi worker thread LLVM rasterizer ke 2 core, menyisakan 2 core bebas untuk pemrosesan aplikasi JWS, event input remote, dan audio tanpa berebut thread CPU scheduler.
+    - Menambahkan `MESA_GL_VERSION_OVERRIDE=2.1` dan `MESA_GLES_VERSION_OVERRIDE=2.0` untuk memangkas overhead validasi OpenGL Mesa.
+  - **Deployment Windows Diperbarui**:
+    - Image `orangepi_zero3_jws.img`, zip `orangepi_zero3_jws.zip`, dan berkas partisi boot di `C:\Users\embun\Documents\ARMBIAN\JWS_NEW_VERSION\` telah diperbarui.
+- Alasan: Menyelamatkan sistem dari freeze booting akibat Panfrost GPU dan mengoptimalkan rendering software agar antarmuka bergerak mulus tanpa patah-patah.
+- File/komponen terdampak: `output/sun50i-h618-orangepi-zero3.dtb`, `scripts/04_create_image.sh`, `overlay/opt/jws/jws`, `CHANGELOG.md`.
+- Commit / tag: `fix(boot): disable panfrost and video mode to prevent boot freeze, optimize mesa threads`
+
 ## [2026-11-14] Perbaikan Serial Console UART0 (Anti Hijack ttyS0), HDMI Murni Splash, dan Akselerasi Hardware GPU Mali 60 FPS
 - Apa yang diubah:
   - **Akar Masalah Serial PuTTY Terhenti di `bootconsole [uart0] disabled` Terpecahkan**:
