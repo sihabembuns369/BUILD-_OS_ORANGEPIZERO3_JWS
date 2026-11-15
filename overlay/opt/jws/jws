@@ -84,12 +84,20 @@ for feat in /sys/bus/virtio/drivers/virtio_gpu/virtio*/features; do
     fi
 done
 
-if [ "$HAS_HW_GL" -eq 0 ]; then
+DRI_DIR="/usr/lib/aarch64-linux-gnu/dri"
+if [ "$HAS_HW_GL" -eq 1 ]; then
+    if [ -e "$DRI_DIR/panfrost_dri.so" ] && [ -e /dev/dri/renderD128 ]; then
+        ln -sf panfrost_dri.so "$DRI_DIR/sun4i-drm_dri.so" 2>/dev/null || true
+    fi
+else
+    if [ -e "$DRI_DIR/kms_swrast_dri.so" ]; then
+        ln -sf kms_swrast_dri.so "$DRI_DIR/sun4i-drm_dri.so" 2>/dev/null || true
+    fi
     export GBM_ALWAYS_SOFTWARE=1
     export LIBGL_ALWAYS_SOFTWARE=1
     export MESA_LOADER_DRIVER_OVERRIDE=kms_swrast
     export GALLIUM_DRIVER=llvmpipe
-    export LP_NUM_THREADS=1
+    export LP_NUM_THREADS=2
     export MESA_NO_ERROR=1
     export MESA_GL_VERSION_OVERRIDE=2.1
     export MESA_GLES_VERSION_OVERRIDE=2.0
@@ -117,9 +125,10 @@ if [ "${UPTIME_SEC:-10}" -lt "$MIN_DUR" ]; then
     sleep $((MIN_DUR - UPTIME_SEC))
 fi
 
-# Jika plymouth masih berjalan, tutup agar Plymouth melepaskan DRM master ke SDL2
+# Jika plymouth masih berjalan, tutup dan tunggu agar Plymouth melepaskan DRM master ke SDL2
 if [ -e /run/plymouth/pid ] || /usr/bin/plymouth --ping 2>/dev/null; then
-    /usr/bin/plymouth quit 2>/dev/null || true
+    /usr/bin/plymouth quit --wait 2>/dev/null || true
+    sleep 0.2
 fi
 
 # Pastikan perangkat input dan tty1 dapat diakses penuh oleh SDL2 evdev

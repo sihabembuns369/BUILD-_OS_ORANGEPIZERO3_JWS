@@ -15,7 +15,7 @@ Environment=SDL_VIDEODRIVER=kmsdrm
 Environment=SDL_AUDIODRIVER=dummy
 Environment=XDG_RUNTIME_DIR=/tmp
 
-ExecStartPre=+/bin/sh -c 'chmod -R 666 /dev/dri/* /dev/fb* /dev/input/* /dev/tty1 /dev/gpiochip* 2>/dev/null || true; /usr/bin/plymouth quit 2>/dev/null || true'
+ExecStartPre=+/bin/sh -c 'chmod -R 666 /dev/dri/* /dev/fb* /dev/input/* /dev/tty1 /dev/gpiochip* 2>/dev/null || true; /usr/bin/plymouth quit --wait 2>/dev/null || true'
 ExecStart=/usr/local/bin/jws-app
 Restart=always
 RestartSec=3

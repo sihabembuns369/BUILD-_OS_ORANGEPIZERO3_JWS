@@ -1,5 +1,18 @@
 # CHANGELOG
 
+## [2026-11-15] Rebuild Kernel 6.1.31 (Fix `sun20i-ppu` & `panfrost=m`), Bebaskan Pin `PC14` dari `mmc2` DTB, dan Perbaiki DRM Master HDMI
+- Apa yang diubah:
+  - **1. Perbaikan IR Remote (`PC14` / Line 78) — Akar Masalah `Invalid argument`**:
+    - Pada `output/sun50i-h618-orangepi-zero3.dtb` sebelumnya, `mmc@4022000` (`mmc2`) berstatus `"okay"` dengan `mmc2-pins` yang mengklaim `PC0..PC16` (termasuk `PC14`, `PC6`, `PC9`), sehingga `pinctrl` mode `strict` mengembalikan `-EINVAL` saat aplikasi meminta Line 78.
+    - DTB baru dari `/home/riski/ORANGEPI_ZERO3/linux/arch/arm64/boot/dts/allwinner/sun50i-h618-orangepi-zero3.dts` menonaktifkan `mmc@4022000` (`status = "disabled"`), membebaskan `PC14` (IR), `PC6` (Relay), dan `PC9` (Fan).
+  - **2. Perbaikan Tampilan HDMI (`jws.service` & `/opt/jws/jws`)**:
+    - Mengubah `plymouth quit` menjadi `plymouth quit --wait` (ditambah `sleep 0.2`) di `overlay/etc/systemd/system/jws.service` dan `overlay/opt/jws/jws` agar `plymouthd` benar-benar melepas DRM master sebelum `jadwalsholat_imgui` memanggil `SDL_CreateWindow`.
+    - Menambahkan pemilihan symlink `/usr/lib/aarch64-linux-gnu/dri/sun4i-drm_dri.so` otomatis (`panfrost_dri.so` jika `/dev/dri/renderD128` ada, `kms_swrast_dri.so` jika tidak ada).
+  - **3. Rebuild Kernel 6.1.31 (`sun20i-ppu.c` & `CONFIG_DRM_PANFROST=m`)**:
+    - Memperbaiki `drivers/soc/sunxi/sun20i-ppu.c` agar `allwinner,sun50i-h616-prcm-ppu` menulis `0x00` pada `power_on` (ungate GPU) dan `0x01` pada `power_off` (gate GPU) pada register `0x07010250` (`GPU_PWROFF_GATING_REG`).
+    - Mengubah `CONFIG_DRM_PANFROST=y` menjadi `CONFIG_DRM_PANFROST=m` (`panfrost.ko` + `gpu-sched.ko` di `/lib/modules/6.1.31/`), menambahkan `power-controller@7010250` dan `power-domains = <&ppu>` di DTB, serta menghapus `initcall_blacklist=panfrost_driver_init` dari `scripts/04_create_image.sh`.
+- File/komponen terdampak: `output/Image`, `output/sun50i-h618-orangepi-zero3.dtb`, `overlay/opt/jws/jws`, `overlay/etc/systemd/system/jws.service`, `scripts/04_create_image.sh`, `CHANGELOG.md`.
+
 ## [2026-11-15] Pulihkan Boot Stabil (Blacklist Panfrost), Turunkan CPU ke 1-Thread llvmpipe, dan Pertahankan Fix IR `/dev/gpiochip1`
 - Apa yang diubah:
   - Mengembalikan `initcall_blacklist=panfrost_driver_init` di `boot.cmd`, `extlinux.conf`, dan `uEnv.txt` serta menonaktifkan `gpu@1800000` (`status = "disabled"`) di DTB karena `panfrost` built-in pada kernel 6.1.31 menyebabkan freeze di `Booting <NULL>`.
