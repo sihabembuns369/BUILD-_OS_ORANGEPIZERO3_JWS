@@ -106,7 +106,7 @@
   "wifiAutoReconnect": true,
   "irEnabled": true,
   "showNavigationOverlay": true,
-  "irChip": "/dev/gpiochip0",
+  "irChip": "/dev/gpiochip1",
   "irLine": 78,
   "irMapping": {
     "0x11": "tombol_home",

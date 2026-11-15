@@ -106,16 +106,20 @@ cp -f "$WPA_SUP_FILE" /etc/wpa_supplicant.conf 2>/dev/null || true
 IR_ENABLED="${IR_ENABLED:-yes}"
 IR_LINE="${IR_LINE:-78}"
 DETECTED_PIO_CHIP=""
-for gc in /sys/bus/platform/devices/*300b000.pinctrl/gpiochip*; do
+for gc in /sys/bus/gpio/devices/gpiochip*; do
     if [ -e "$gc" ]; then
-        DETECTED_PIO_CHIP="/dev/$(basename "$gc")"
-        break
+        NGPIO=$(cat "$gc/ngpio" 2>/dev/null || echo 0)
+        DEVPATH=$(readlink -f "$gc/device" 2>/dev/null || echo "")
+        if echo "$DEVPATH" | grep -q "300b000.pinctrl" || [ "${NGPIO:-0}" -gt "${IR_LINE:-78}" ]; then
+            DETECTED_PIO_CHIP="/dev/$(basename "$gc")"
+            break
+        fi
     fi
 done
-if [ -n "$DETECTED_PIO_CHIP" ] && [ "${IR_LINE:-78}" -ge 32 ]; then
+if [ -n "$DETECTED_PIO_CHIP" ]; then
     IR_CHIP="$DETECTED_PIO_CHIP"
 else
-    IR_CHIP="${IR_CHIP:-/dev/gpiochip0}"
+    IR_CHIP="${IR_CHIP:-/dev/gpiochip1}"
 fi
 
 if [ -f "/opt/jws/settings.json" ]; then

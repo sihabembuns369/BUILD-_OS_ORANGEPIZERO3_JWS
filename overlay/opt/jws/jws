@@ -16,13 +16,17 @@ for gov in /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor; do
 done
 
 # 2. Deteksi otomatis chip GPIO utama (300b000.pinctrl) untuk sensor IR Remote PC14 (Line 78)
-for gc in /sys/bus/platform/devices/*300b000.pinctrl/gpiochip*; do
+for gc in /sys/bus/gpio/devices/gpiochip*; do
     if [ -e "$gc" ]; then
-        export IR_CHIP="/dev/$(basename "$gc")"
-        break
+        NGPIO=$(cat "$gc/ngpio" 2>/dev/null || echo 0)
+        DEVPATH=$(readlink -f "$gc/device" 2>/dev/null || echo "")
+        if echo "$DEVPATH" | grep -q "300b000.pinctrl" || [ "${NGPIO:-0}" -gt "${IR_LINE:-78}" ]; then
+            export IR_CHIP="/dev/$(basename "$gc")"
+            break
+        fi
     fi
 done
-export IR_CHIP="${IR_CHIP:-/dev/gpiochip0}"
+export IR_CHIP="${IR_CHIP:-/dev/gpiochip1}"
 export IR_LINE="${IR_LINE:-78}"
 chmod 666 /dev/gpiochip* 2>/dev/null || true
 
