@@ -1,6 +1,7 @@
 #!/bin/sh
 # Wrapper wpa_cli untuk Orange Pi Zero 3 (Unisoc UWE5622 / sprdwl_ng)
-# Memastikan wpa_supplicant aktif dan memberi jeda waktu scan hardware cukup sebelum scan_results dibaca.
+# Memastikan wpa_supplicant aktif tanpa menghapus socket hidup (pgrep diganti PING + busybox),
+# serta memberi jeda pemindaian agar scan_results terisi lengkap.
 
 CONF="/etc/wpa_supplicant/wpa_supplicant.conf"
 [ ! -f "$CONF" ] && CONF="/etc/wpa_supplicant.conf"
@@ -10,34 +11,81 @@ if [ ! -f "$CONF" ]; then
     CONF="/etc/wpa_supplicant/wpa_supplicant.conf"
 fi
 
-if [ ! -d /sys/class/net/wlan0 ]; then
-    modprobe uwe5622_bsp_sdio 2>/dev/null || true
-    modprobe sprdwl_ng 2>/dev/null || true
-    sleep 1
-fi
+IFACE="wlan0"
+CMD=""
+EXPECT_IFACE=0
+for arg in "$@"; do
+    if [ "$EXPECT_IFACE" -eq 1 ]; then
+        IFACE="$arg"
+        EXPECT_IFACE=0
+        continue
+    fi
+    case "$arg" in
+        -i)
+            EXPECT_IFACE=1
+            ;;
+        -*)
+            ;;
+        *)
+            if [ "$arg" != "$IFACE" ]; then
+                CMD="$arg"
+            fi
+            ;;
+    esac
+done
 
-ip link set wlan0 up 2>/dev/null || /usr/bin/busybox ifconfig wlan0 up 2>/dev/null || true
 mkdir -p /var/run/wpa_supplicant
 
-if ! pgrep -x wpa_supplicant >/dev/null 2>&1; then
-    rm -rf /var/run/wpa_supplicant/* 2>/dev/null || true
-    /usr/sbin/wpa_supplicant -B -i wlan0 -Dnl80211 -c "$CONF" >/dev/null 2>&1 || \
-    /usr/sbin/wpa_supplicant -B -i wlan0 -c "$CONF" >/dev/null 2>&1 || true
-    sleep 1
+# Hanya inisialisasi ulang driver / daemon bila wpa_supplicant belum merespons PONG!
+if ! /usr/sbin/wpa_cli.real -i "$IFACE" ping 2>/dev/null | grep -q "PONG"; then
+    if [ ! -d "/sys/class/net/$IFACE" ]; then
+        # Muat driver UWE5622 hanya pada perangkat non-QEMU
+        if ! grep -qi "QEMU" /proc/cpuinfo 2>/dev/null && [ ! -d /sys/bus/virtio/drivers/virtio_gpu ]; then
+            modprobe uwe5622_bsp_sdio 2>/dev/null || true
+            modprobe sprdwl_ng 2>/dev/null || true
+            for _i in 1 2 3 4 5 6 7 8 9 10; do
+                [ -d "/sys/class/net/$IFACE" ] && break
+                sleep 0.5
+            done
+        fi
+    fi
+
+    if [ -d "/sys/class/net/$IFACE" ]; then
+        for rf in /sys/class/rfkill/rfkill*/soft; do
+            [ -w "$rf" ] && echo 0 > "$rf" 2>/dev/null || true
+        done
+        ip link set "$IFACE" up 2>/dev/null || /usr/bin/busybox ifconfig "$IFACE" up 2>/dev/null || true
+
+        if ! /usr/bin/busybox pgrep wpa_supplicant >/dev/null 2>&1; then
+            rm -f "/var/run/wpa_supplicant/$IFACE" 2>/dev/null || true
+            /usr/sbin/wpa_supplicant -B -i "$IFACE" -Dnl80211 -c "$CONF" >/dev/null 2>&1 || \
+            /usr/sbin/wpa_supplicant -B -i "$IFACE" -Dwext -c "$CONF" >/dev/null 2>&1 || \
+            /usr/sbin/wpa_supplicant -B -i "$IFACE" -c "$CONF" >/dev/null 2>&1 || true
+            for _w in 1 2 3 4 5 6; do
+                [ -S "/var/run/wpa_supplicant/$IFACE" ] && break
+                sleep 0.5
+            done
+        fi
+    fi
 fi
 
-OUT=$(/usr/sbin/wpa_cli.real "$@" 2>/dev/null)
+OUT=$(/usr/sbin/wpa_cli.real "$@" 2>&1)
 RET=$?
-printf "%s\n" "$OUT"
 
-# Jika perintah adalah 'scan' (bukan 'scan_results'), tunggu 2 detik agar driver sprdwl_ng
-# menyelesaikan pemindaian frekuensi 2.4GHz/5GHz sebelum aplikasi JWS memanggil 'scan_results'.
-LAST_ARG=""
-for arg in "$@"; do
-    LAST_ARG="$arg"
-done
-if [ "$LAST_ARG" = "scan" ]; then
-    sleep 2
+# Bila firmware UWE5622 sedang memindai (FAIL-BUSY) atau scan baru dimulai,
+# tunggu hingga hasil pemindaian masuk ke cache scan_results sebelum kembali ke aplikasi.
+if [ "$CMD" = "scan" ]; then
+    case "$OUT" in
+        *FAIL-BUSY*)
+            sleep 2
+            printf "OK\n"
+            exit 0
+            ;;
+        *OK*)
+            sleep 3
+            ;;
+    esac
 fi
 
+printf "%s\n" "$OUT"
 exit $RET

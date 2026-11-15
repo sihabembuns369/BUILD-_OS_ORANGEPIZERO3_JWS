@@ -1,0 +1,33 @@
+#!/bin/sh
+# Shim ringan 'rfkill' berbasis /sys/class/rfkill untuk rootfs minimal.
+
+case "$1" in
+    unblock)
+        for rf in /sys/class/rfkill/rfkill*/soft; do
+            [ -w "$rf" ] && echo 0 > "$rf" 2>/dev/null || true
+        done
+        exit 0
+        ;;
+    block)
+        for rf in /sys/class/rfkill/rfkill*/soft; do
+            [ -w "$rf" ] && echo 1 > "$rf" 2>/dev/null || true
+        done
+        exit 0
+        ;;
+    list|"")
+        for d in /sys/class/rfkill/rfkill*; do
+            [ -d "$d" ] || continue
+            IDX=$(basename "$d" | sed 's/rfkill//')
+            NAME=$(cat "$d/name" 2>/dev/null || echo "unknown")
+            TYPE=$(cat "$d/type" 2>/dev/null || echo "wlan")
+            SOFT=$(cat "$d/soft" 2>/dev/null || echo 0)
+            HARD=$(cat "$d/hard" 2>/dev/null || echo 0)
+            printf "%s: %s: %s\n\tSoft blocked: %s\n\tHard blocked: %s\n" \
+                "$IDX" "$NAME" "$TYPE" \
+                "$([ "$SOFT" = "1" ] && echo yes || echo no)" \
+                "$([ "$HARD" = "1" ] && echo yes || echo no)"
+        done
+        exit 0
+        ;;
+esac
+exit 0

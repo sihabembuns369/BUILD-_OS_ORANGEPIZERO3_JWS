@@ -53,10 +53,16 @@ fi
             if [ ! -f /etc/wpa_supplicant/wpa_supplicant.conf ]; then
                 printf "ctrl_interface=/var/run/wpa_supplicant\nupdate_config=1\n" > /etc/wpa_supplicant/wpa_supplicant.conf
             fi
-            if ! pgrep -x wpa_supplicant >/dev/null 2>&1; then
-                rm -rf /var/run/wpa_supplicant/* 2>/dev/null || true
-                /usr/sbin/wpa_supplicant -B -i wlan0 -Dnl80211 -c /etc/wpa_supplicant/wpa_supplicant.conf >/dev/null 2>&1 || true
-                sleep 1
+            if ! /usr/sbin/wpa_cli.real -i wlan0 ping 2>/dev/null | grep -q "PONG"; then
+                if ! /usr/bin/busybox pgrep wpa_supplicant >/dev/null 2>&1; then
+                    rm -rf /var/run/wpa_supplicant/wlan0 2>/dev/null || true
+                    /usr/sbin/wpa_supplicant -B -i wlan0 -Dnl80211 -c /etc/wpa_supplicant/wpa_supplicant.conf >/dev/null 2>&1 || \
+                    /usr/sbin/wpa_supplicant -B -i wlan0 -c /etc/wpa_supplicant/wpa_supplicant.conf >/dev/null 2>&1 || true
+                    for _w in 1 2 3 4 5 6; do
+                        [ -S /var/run/wpa_supplicant/wlan0 ] && break
+                        sleep 0.5
+                    done
+                fi
             fi
             /usr/sbin/wpa_cli.real -i wlan0 scan >/dev/null 2>&1 || true
             (
@@ -85,30 +91,33 @@ export SDL_HINT_RENDER_BATCHING=1
 # WAJIB aktifkan GBM_ALWAYS_SOFTWARE=1 & kms_swrast (llvmpipe 4-thread ARM NEON JIT) agar
 # SDL_CreateRenderer tidak gagal dan tidak jatuh ke fallback SDL_render_sw (1-thread lambat).
 HAS_HW_GL=0
-if [ -e /dev/dri/renderD128 ]; then
+if [ -d /sys/bus/virtio/drivers/virtio_gpu ]; then
+    for feat in /sys/bus/virtio/drivers/virtio_gpu/virtio*/features; do
+        if [ -r "$feat" ] && [ "$(head -c 1 "$feat")" = "1" ]; then
+            HAS_HW_GL=1
+            break
+        fi
+    done
+elif [ -e /dev/dri/renderD128 ]; then
     HAS_HW_GL=1
 fi
-for feat in /sys/bus/virtio/drivers/virtio_gpu/virtio*/features; do
-    if [ -r "$feat" ] && [ "$(head -c 1 "$feat")" = "1" ]; then
-        HAS_HW_GL=1
-        break
-    fi
-done
 
 DRI_DIR="/usr/lib/aarch64-linux-gnu/dri"
 if [ "$HAS_HW_GL" -eq 1 ]; then
-    if [ -e "$DRI_DIR/panfrost_dri.so" ] && [ -e /dev/dri/renderD128 ]; then
+    if [ -e "$DRI_DIR/panfrost_dri.so" ] && [ -e /dev/dri/renderD128 ] && [ ! -d /sys/bus/virtio/drivers/virtio_gpu ]; then
         ln -sf panfrost_dri.so "$DRI_DIR/sun4i-drm_dri.so" 2>/dev/null || true
     fi
 else
-    if [ -e "$DRI_DIR/kms_swrast_dri.so" ]; then
+    if [ -e "$DRI_DIR/kms_swrast_dri.so" ] && [ ! -d /sys/bus/virtio/drivers/virtio_gpu ]; then
         ln -sf kms_swrast_dri.so "$DRI_DIR/sun4i-drm_dri.so" 2>/dev/null || true
     fi
     # JANGAN export GBM_ALWAYS_SOFTWARE=1 karena merusak scanout hardware DRM/KMS ke HDMI
+    mkdir -p /var/cache/mesa_shader_cache 2>/dev/null || true
+    export MESA_SHADER_CACHE_DIR=/var/cache/mesa_shader_cache
     export LIBGL_ALWAYS_SOFTWARE=1
     export MESA_LOADER_DRIVER_OVERRIDE=kms_swrast
     export GALLIUM_DRIVER=llvmpipe
-    export LP_NUM_THREADS=1
+    export LP_NUM_THREADS=4
     export MESA_NO_ERROR=1
     export MESA_GL_VERSION_OVERRIDE=2.1
     export MESA_GLES_VERSION_OVERRIDE=2.0

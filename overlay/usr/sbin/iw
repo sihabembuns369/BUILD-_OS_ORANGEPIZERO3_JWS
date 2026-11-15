@@ -1,0 +1,34 @@
+#!/bin/sh
+# Shim ringan 'iw' berbasis sysfs & wpa_cli untuk rootfs Debian minimal.
+# Mendukung 'iw dev' dan 'iw dev <iface> link' yang dipakai WiFiManager JWS.
+
+if [ "$1" = "dev" ] && [ -z "$2" ]; then
+    IDX=0
+    for netdir in /sys/class/net/*; do
+        [ -d "$netdir" ] || continue
+        IFNAME=$(basename "$netdir")
+        if [ -d "$netdir/wireless" ] || [ -d "$netdir/phy80211" ] || case "$IFNAME" in wlan*) true ;; *) false ;; esac; then
+            printf "phy#%d\n\tInterface %s\n\t\ttype managed\n" "$IDX" "$IFNAME"
+            IDX=$((IDX + 1))
+        fi
+    done
+    exit 0
+fi
+
+if [ "$1" = "dev" ] && [ -n "$2" ] && [ "$3" = "link" ]; then
+    IFACE="$2"
+    STATUS=$(/usr/sbin/wpa_cli.real -i "$IFACE" status 2>/dev/null || true)
+    if echo "$STATUS" | grep -q "wpa_state=COMPLETED"; then
+        BSSID=$(echo "$STATUS" | awk -F= '/^bssid=/{print $2; exit}')
+        SSID=$(echo "$STATUS" | awk -F= '/^ssid=/{print $2; exit}')
+        FREQ=$(echo "$STATUS" | awk -F= '/^freq=/{print $2; exit}')
+        printf "Connected to %s (on %s)\n" "${BSSID:-00:00:00:00:00:00}" "$IFACE"
+        [ -n "$SSID" ] && printf "\tSSID: %s\n" "$SSID"
+        [ -n "$FREQ" ] && printf "\tfreq: %s\n" "$FREQ"
+        exit 0
+    fi
+    printf "Not connected.\n"
+    exit 0
+fi
+
+exit 0

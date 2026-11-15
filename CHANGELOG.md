@@ -1,5 +1,20 @@
 # CHANGELOG
 
+## [2026-11-16] Perbaikan Performa UI (4-Thread OpenGL ES 2.0 Tanpa Throttle Ganda) & Perbaikan Scan Wi-Fi (`wpa_cli` / BusyBox `pgrep` / `iw` / `rfkill`)
+- Apa yang diubah:
+  - **1. Akar Masalah Aplikasi JWS Ngelag Parah & Patah-Patah**:
+    - [libjws_perf.c](file:///home/riski/JWS_ORANGEPI_BUILDLINUX/scripts/libjws_perf.c) dan [jws](file:///home/riski/JWS_ORANGEPI_BUILDLINUX/overlay/opt/jws/jws) sebelumnya memaksa `LP_NUM_THREADS=1` (hanya memakai 1 dari 4 core Cortex-A53 untuk rasterisasi 1280x720 Mesa `llvmpipe`) dan menyuntikkan `SDL_Delay` tambahan 70ms (~14 FPS) di `SDL_RenderPresent` di atas limiter 30 FPS (33ms) + VSync bawaan `jadwalsholat_imgui`.
+    - Selain itu, deteksi QEMU `virtio_gpu` (`/dev/dri/renderD128`) sempat mengarahkan symlink `sun4i-drm_dri.so` saat QEMU berjalan.
+    - **Solusi**: Mengembalikan `LP_NUM_THREADS=4` + `MESA_NO_ERROR=1`, menghapus throttle tidur 70ms/33ms ganda di [libjws_perf.c](file:///home/riski/JWS_ORANGEPI_BUILDLINUX/scripts/libjws_perf.c), menambahkan log diagnostik 1 kali `[JWS-PERF] SDL video=... renderer=...`, menjaga redirect aman IR GPIO ke `/dev/gpiochip0`, serta memperbaiki deteksi GPU virtual vs hardware di [jws](file:///home/riski/JWS_ORANGEPI_BUILDLINUX/overlay/opt/jws/jws) dan [sync_rootfs_debugfs.py](file:///home/riski/JWS_ORANGEPI_BUILDLINUX/scripts/sync_rootfs_debugfs.py).
+  - **2. Akar Masalah Wi-Fi Tidak Bisa Scan (`wpa_cli` / `pgrep` / `iw` / `rfkill`)**:
+    - Di rootfs minimal, binary `pgrep` & `pkill` belum tersedia sehingga kondisi `if ! pgrep -x wpa_supplicant` pada [wpa_cli](file:///home/riski/JWS_ORANGEPI_BUILDLINUX/overlay/usr/sbin/wpa_cli) dan [jws](file:///home/riski/JWS_ORANGEPI_BUILDLINUX/overlay/opt/jws/jws) selalu bernilai gagal (`exit 127`), menyebabkan **setiap panggilan `wpa_cli scan` atau `scan_results` menghapus `/var/run/wpa_supplicant/*`** (memutus socket `wpa_supplicant`).
+    - Binary `iw`, `rfkill`, dan `iwgetid` yang dipanggil `WiFiManager` di `jadwalsholat_imgui` juga belum tersedia di rootfs.
+    - **Solusi**: Menambahkan symlink `pgrep` & `pkill` ke `busybox`, mengganti pengecekan daemon di [wpa_cli](file:///home/riski/JWS_ORANGEPI_BUILDLINUX/overlay/usr/sbin/wpa_cli) dan [jws](file:///home/riski/JWS_ORANGEPI_BUILDLINUX/overlay/opt/jws/jws) dengan `wpa_cli.real -i <iface> ping` (`PONG`) + `busybox pgrep` (hanya membersihkan socket stale jika ping gagal dan daemon mati), menunggu `FAIL-BUSY`/`OK` scan selama 2–3 detik untuk `sprdwl_ng`, memperbaiki `pkill` di [udhcpc](file:///home/riski/JWS_ORANGEPI_BUILDLINUX/overlay/usr/sbin/udhcpc), serta menyediakan shim [iw](file:///home/riski/JWS_ORANGEPI_BUILDLINUX/overlay/usr/sbin/iw), [rfkill](file:///home/riski/JWS_ORANGEPI_BUILDLINUX/overlay/usr/sbin/rfkill), dan [iwgetid](file:///home/riski/JWS_ORANGEPI_BUILDLINUX/overlay/usr/sbin/iwgetid) (tersedia di `/usr/sbin` dan `/usr/bin`).
+  - **Hasil Uji QEMU (`task-1505`)**:
+    - Boot ke auto-login `jws` dengan `0 loaded units` failed, `jws` & `ssh` active, screendump `1280x720` non-black, log `[JWS-PERF] SDL video=KMSDRM renderer=opengles2 flags=0xe LP_NUM_THREADS=4`, `/usr/lib/aarch64-linux-gnu/dri/sun4i-drm_dri.so -> kms_swrast_dri.so`, dan `/usr/bin/{pgrep,pkill,iw,rfkill,iwgetid,wpa_cli}` terdeteksi.
+    - Kelancaran animasi fisik di HDMI & pemindaian AP Wi-Fi UWE5622 nyata: **perlu uji di board fisik**.
+- File/komponen terdampak: `scripts/libjws_perf.c`, `overlay/usr/lib/aarch64-linux-gnu/libjws_perf.so`, `overlay/opt/jws/jws`, `overlay/usr/sbin/wpa_cli`, `overlay/usr/sbin/udhcpc`, `overlay/usr/sbin/iw`, `overlay/usr/sbin/rfkill`, `overlay/usr/sbin/iwgetid`, `overlay/usr/bin/{pgrep,pkill,iw,rfkill,iwgetid,wpa_cli}`, `scripts/sync_rootfs_debugfs.py`, `CHANGELOG.md`.
+
 ## [2026-11-15] Kompilasi Ulang Menyeluruh: Perbaikan HDMI/Splash (`sun50i-h618-orangepi-zero3.dtb` & `ZRAM`), Perbaikan Rootfs 100% Penuh, dan Pemisahan Tegas UART/HDMI
 - Apa yang diubah:
   - **1. Akar Masalah HDMI Blank & Splash Tidak Tampil / Kacau di Orange Pi Zero 3**:

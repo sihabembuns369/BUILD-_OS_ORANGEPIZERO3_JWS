@@ -65,7 +65,8 @@ static void jws_perf_init(void) {
             setenv("LIBGL_ALWAYS_SOFTWARE", "1", 1);
             setenv("MESA_LOADER_DRIVER_OVERRIDE", "kms_swrast", 1);
             setenv("GALLIUM_DRIVER", "llvmpipe", 1);
-            setenv("LP_NUM_THREADS", "1", 1);
+            setenv("LP_NUM_THREADS", "4", 0);
+            setenv("MESA_NO_ERROR", "1", 0);
             setenv("MESA_GL_VERSION_OVERRIDE", "2.1", 1);
             setenv("MESA_GLES_VERSION_OVERRIDE", "2.0", 1);
         }
@@ -115,26 +116,40 @@ int SDL_PushEvent(void *event) {
     return real_SDL_PushEvent(event);
 }
 
-/* 2. Frame pacing aman & bersih: SELALU render penuh, batasi kecepatan agar CPU < 10% */
+/* 2. Log active SDL renderer once and avoid extra throttling beyond app's 30 FPS / VSync */
+typedef struct {
+    const char *name;
+    uint32_t flags;
+    uint32_t num_texture_formats;
+    uint32_t texture_formats[16];
+    int max_texture_width;
+    int max_texture_height;
+} JwsSDLRendererInfo;
+
 void SDL_RenderPresent(void *renderer) {
+    static int logged_renderer = 0;
     if (!real_SDL_RenderPresent) resolve_symbols();
+    if (!logged_renderer && g_is_jws && renderer) {
+        logged_renderer = 1;
+        int (*fn_info)(void *, JwsSDLRendererInfo *) = dlsym(RTLD_NEXT, "SDL_GetRendererInfo");
+        const char *(*fn_vid)(void) = dlsym(RTLD_NEXT, "SDL_GetCurrentVideoDriver");
+        JwsSDLRendererInfo info;
+        memset(&info, 0, sizeof(info));
+        if (fn_info && fn_info(renderer, &info) == 0) {
+            fprintf(stderr, "[JWS-PERF] SDL video=%s renderer=%s flags=0x%x LP_NUM_THREADS=%s\n",
+                    fn_vid ? (fn_vid() ? fn_vid() : "?") : "?",
+                    info.name ? info.name : "?",
+                    info.flags,
+                    getenv("LP_NUM_THREADS") ? getenv("LP_NUM_THREADS") : "unset");
+            fflush(stderr);
+        }
+    }
     real_SDL_RenderPresent(renderer);
 
     if (!g_is_jws) return;
 
-    uint64_t now = get_now_ms();
-    bool active_input = (now - g_last_input_ms < 3000ULL);
-    /* Target interval: 33ms (~30 FPS) saat aktif, 70ms (~14 FPS) saat idle dashboard */
-    uint64_t target_interval_ms = active_input ? 33ULL : 70ULL;
-
-    uint64_t elapsed = now - g_last_render_ms;
-    if (elapsed < target_interval_ms) {
-        uint32_t sleep_ms = (uint32_t)(target_interval_ms - elapsed);
-        if (real_SDL_Delay) {
-            real_SDL_Delay(sleep_ms);
-        } else {
-            usleep(sleep_ms * 1000);
-        }
-    }
+    /* Aplikasi jadwalsholat_imgui sudah memiliki limiter 30 FPS (33ms) + SDL_RENDER_VSYNC.
+     * Jangan menyuntikkan sleep 70ms tambahan di sini agar animasi & navigasi tidak patah-patah. */
     g_last_render_ms = get_now_ms();
+    (void)g_last_input_ms;
 }

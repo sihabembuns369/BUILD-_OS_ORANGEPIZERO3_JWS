@@ -1,0 +1,26 @@
+#!/bin/sh
+# Shim ringan 'iwgetid' menggunakan wpa_cli.real
+
+IFACE="wlan0"
+RAW=0
+for arg in "$@"; do
+    case "$arg" in
+        -r|--raw) RAW=1 ;;
+        -*) ;;
+        *) IFACE="$arg" ;;
+    esac
+done
+
+STATUS=$(/usr/sbin/wpa_cli.real -i "$IFACE" status 2>/dev/null || true)
+if echo "$STATUS" | grep -q "wpa_state=COMPLETED"; then
+    SSID=$(echo "$STATUS" | awk -F= '/^ssid=/{print $2; exit}')
+    if [ -n "$SSID" ]; then
+        if [ "$RAW" -eq 1 ]; then
+            printf "%s\n" "$SSID"
+        else
+            printf "%s     ESSID:\"%s\"\n" "$IFACE" "$SSID"
+        fi
+        exit 0
+    fi
+fi
+exit 1
