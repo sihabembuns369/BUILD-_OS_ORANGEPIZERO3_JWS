@@ -1,5 +1,19 @@
 # CHANGELOG
 
+## [2026-11-15] Pemulihan Boot Total: Eliminasi GPU Bus Freeze (Blacklist Panfrost), Pulihkan CMA 128M & Video Mode HDMI, dan Aktifkan systemd.show_status
+- Apa yang diubah:
+  - **Akar Masalah Freeze di `Mounted boot.mount`**:
+    - Driver GPU kernel `panfrost` pada kernel 6.1.31 SoC Allwinner H618 mengalami kegagalan inisialisasi PPU/clock bus yang menyebabkan **seluruh SoC bus hang / freeze total** tepat ketika udev dan `systemd-modules-load` memuat driver saat boot.
+    - Akibat freeze ini, seluruh sistem berhenti mendadak: CPU terhenti, serial UART berhenti mengirim data, display engine DE33 tidak aktif, dan HDMI tidak pernah mengeluarkan sinyal.
+  - **Solusi**:
+    - Menonaktifkan GPU di Device Tree: `&gpu { status = "disabled"; };` pada [sun50i-h618-orangepi-zero3.dts](file:///home/riski/ORANGEPI_ZERO3/linux/arch/arm64/boot/dts/allwinner/sun50i-h618-orangepi-zero3.dts).
+    - Menambahkan `initcall_blacklist=panfrost_driver_init` pada `bootargs` di U-Boot `boot.cmd`, `extlinux.conf`, dan `uEnv.txt`.
+    - Menghapus `panfrost` dari `/etc/modules` dan menambahkan [blacklist-panfrost.conf](file:///home/riski/JWS_ORANGEPI_BUILDLINUX/overlay/etc/modprobe.d/blacklist-panfrost.conf).
+    - Memulihkan alokasi memori display `cma=128M` dan mode HDMI paksa `video=HDMI-A-1:1280x720@60` agar display engine Allwinner memiliki buffer yang cukup untuk scanout HDMI tanpa menunggu negosiasi EDID monitor yang lambat.
+    - Menambahkan `systemd.show_status=1` agar log proses booting systemd terus mengalir di PuTTY (COM5) sampai prompt login/aplikasi muncul.
+    - Performa aplikasi tetap dingin (< 10% CPU) karena di-handle secara sempurna oleh library shim [libjws_perf.so](file:///home/riski/JWS_ORANGEPI_BUILDLINUX/overlay/usr/lib/aarch64-linux-gnu/libjws_perf.so) (adaptive frame pacing 10 FPS).
+- File/komponen terdampak: `sun50i-h618-orangepi-zero3.dtb`, `scripts/04_create_image.sh`, `overlay/etc/modules`, `overlay/opt/jws/jws`, `overlay/etc/modprobe.d/blacklist-panfrost.conf`, `CHANGELOG.md`.
+
 ## [2026-11-15] Solusi Menyeluruh: Eliminasi CPU 300% (Adaptive Frame Pacing <10%), Perbaikan Total Pin IR (/dev/gpiochip0 Line 78), dan Otomatisasi Wi-Fi Headless + DHCP
 - Apa yang diubah:
   - **1. Penyebab & Solusi CPU 300% (Turun ke <10% dan Smooth Tanpa Lag)**:
