@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## [2026-11-15] Pulihkan Boot Stabil (Blacklist Panfrost), Turunkan CPU ke 1-Thread llvmpipe, dan Pertahankan Fix IR `/dev/gpiochip1`
+- Apa yang diubah:
+  - Mengembalikan `initcall_blacklist=panfrost_driver_init` di `boot.cmd`, `extlinux.conf`, dan `uEnv.txt` serta menonaktifkan `gpu@1800000` (`status = "disabled"`) di DTB karena `panfrost` built-in pada kernel 6.1.31 menyebabkan freeze di `Booting <NULL>`.
+  - Mengembalikan symlink `/usr/lib/aarch64-linux-gnu/dri/sun4i-drm_dri.so -> kms_swrast_dri.so` di `rootfs_compact.img`.
+  - Mengubah `LP_NUM_THREADS=4` menjadi `LP_NUM_THREADS=1` + `MESA_NO_ERROR=1` di `overlay/opt/jws/jws` agar Mesa `llvmpipe` tidak memutar 4 worker thread sekaligus (menurunkan pemakaian CPU dari ~300% menjadi jauh lebih rendah sembari tetap menjaga tampilan 720p lancar dan responsif).
+  - Tetap mempertahankan seluruh perbaikan IR Remote `/dev/gpiochip1` (Line 78) + aturan udev `99-jws-gpio.rules` dan Wi-Fi Unisoc UWE5622.
+- Alasan: Memulihkan boot agar HDMI & PuTTY langsung menyala normal dan mengurangi lonjakan CPU 300% dari 4 thread `llvmpipe`.
+- File/komponen terdampak: `output/sun50i-h618-orangepi-zero3.dtb`, `scripts/04_create_image.sh`, `overlay/opt/jws/jws`, `CHANGELOG.md`.
+- Commit / tag: `fix(boot,perf): restore panfrost blacklist to fix boot hang and use single-thread llvmpipe`
+
 ## [2026-11-15] Aktivasi GPU Hardware Mali-G31 MP2 (Panfrost Aman <10% CPU) & Perbaikan IR GPIO `/dev/gpiochip1`
 - Apa yang diubah:
   - **1. Aktivasi Akselerasi Hardware GPU Mali-G31 MP2 (`panfrost`) Secara Aman (Menurunkan CPU dari ~300% ke <10%)**:

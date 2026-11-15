@@ -89,7 +89,8 @@ if [ "$HAS_HW_GL" -eq 0 ]; then
     export LIBGL_ALWAYS_SOFTWARE=1
     export MESA_LOADER_DRIVER_OVERRIDE=kms_swrast
     export GALLIUM_DRIVER=llvmpipe
-    export LP_NUM_THREADS=4
+    export LP_NUM_THREADS=1
+    export MESA_NO_ERROR=1
     export MESA_GL_VERSION_OVERRIDE=2.1
     export MESA_GLES_VERSION_OVERRIDE=2.0
 fi
