@@ -7,10 +7,12 @@ cd "$APP_DIR" || exit 1
 
 export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 export LD_LIBRARY_PATH="$APP_DIR/lib:/usr/lib/aarch64-linux-gnu:/lib/aarch64-linux-gnu:/lib:/usr/lib:$LD_LIBRARY_PATH"
+export LD_PRELOAD="/usr/lib/aarch64-linux-gnu/libjws_perf.so:$LD_PRELOAD"
 export SDL_AUDIODRIVER="${SDL_AUDIODRIVER:-dummy}"
 
 # 1. Aktifkan driver cpufreq Allwinner agar CPU clock naik dari 408MHz ke 1.512GHz maksimal
 modprobe sun50i-cpufreq-nvmem 2>/dev/null || true
+modprobe panfrost 2>/dev/null || true
 for gov in /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor; do
     [ -f "$gov" ] && echo "performance" > "$gov" 2>/dev/null || true
 done
@@ -26,7 +28,7 @@ for gc in /sys/bus/gpio/devices/gpiochip*; do
         fi
     fi
 done
-export IR_CHIP="${IR_CHIP:-/dev/gpiochip1}"
+export IR_CHIP="${IR_CHIP:-/dev/gpiochip0}"
 export IR_LINE="${IR_LINE:-78}"
 chmod 666 /dev/gpiochip* 2>/dev/null || true
 
@@ -58,6 +60,17 @@ fi
                 sleep 1
             fi
             /usr/sbin/wpa_cli.real -i wlan0 scan >/dev/null 2>&1 || true
+            (
+                for _ in $(seq 1 20); do
+                    if /usr/sbin/wpa_cli.real -i wlan0 status 2>/dev/null | grep -q "wpa_state=COMPLETED"; then
+                        if ! ip -4 addr show dev wlan0 | grep -q "inet "; then
+                            /usr/bin/busybox udhcpc -i wlan0 -s /usr/share/udhcpc/default.script -n -q -b >/dev/null 2>&1 || true
+                        fi
+                        break
+                    fi
+                    sleep 1
+                done
+            ) &
         fi
     fi
 ) &
@@ -97,7 +110,7 @@ else
     export LIBGL_ALWAYS_SOFTWARE=1
     export MESA_LOADER_DRIVER_OVERRIDE=kms_swrast
     export GALLIUM_DRIVER=llvmpipe
-    export LP_NUM_THREADS=2
+    export LP_NUM_THREADS=1
     export MESA_NO_ERROR=1
     export MESA_GL_VERSION_OVERRIDE=2.1
     export MESA_GLES_VERSION_OVERRIDE=2.0

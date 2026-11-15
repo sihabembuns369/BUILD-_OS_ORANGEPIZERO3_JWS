@@ -26,5 +26,5 @@ RELAY_ACTIVE_HIGH=yes        # yes/no (yes jika relay aktif HIGH, no jika aktif 
 
 # Infra Red (IR) Remote Control (VS1838B / TSOP4838)
 IR_ENABLED=yes               # yes/no (aktifkan kontrol remote IR)
-IR_CHIP=/dev/gpiochip1       # controller GPIO utama SoC Allwinner H618 (0300b000.pinctrl)
+IR_CHIP=/dev/gpiochip0       # controller GPIO utama SoC Allwinner H618 (0300b000.pinctrl)
 IR_LINE=78                   # Pin GPIO 78 = PC14 (Header Pin 18)

@@ -98,6 +98,21 @@ network={
 }
 EOF
         chmod 600 "$WPA_SUP_FILE"
+        if [ -f "/opt/jws/settings.json" ]; then
+            python3 -c "
+import json
+try:
+    with open('/opt/jws/settings.json', 'r') as f:
+        cfg = json.load(f)
+    cfg['wifiSSID'] = '''${WIFI_SSID}'''
+    cfg['wifiPassword'] = '''${WIFI_PASSWORD}'''
+    cfg['wifiAutoReconnect'] = True
+    with open('/opt/jws/settings.json', 'w') as f:
+        json.dump(cfg, f, indent=2)
+except Exception:
+    pass
+" 2>/dev/null || true
+        fi
     fi
 fi
 cp -f "$WPA_SUP_FILE" /etc/wpa_supplicant.conf 2>/dev/null || true
@@ -119,7 +134,7 @@ done
 if [ -n "$DETECTED_PIO_CHIP" ]; then
     IR_CHIP="$DETECTED_PIO_CHIP"
 else
-    IR_CHIP="${IR_CHIP:-/dev/gpiochip1}"
+    IR_CHIP="${IR_CHIP:-/dev/gpiochip0}"
 fi
 
 if [ -f "/opt/jws/settings.json" ]; then
