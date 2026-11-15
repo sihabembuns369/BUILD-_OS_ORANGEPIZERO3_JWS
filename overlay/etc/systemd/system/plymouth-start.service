@@ -1,7 +1,9 @@
 [Unit]
 Description=Show Plymouth Boot Screen
 DefaultDependencies=no
-Before=sysinit.target
+Wants=systemd-ask-password-plymouth.path
+After=systemd-udev-trigger.service systemd-udevd.service keyboard-setup.service
+Before=systemd-ask-password-plymouth.service sysinit.target
 ConditionKernelCommandLine=!plymouth.enable=0
 ConditionKernelCommandLine=!nosplash
 ConditionVirtualization=!container

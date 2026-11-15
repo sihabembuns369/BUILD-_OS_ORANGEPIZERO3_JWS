@@ -1,2 +1,2 @@
 # /etc/fstab: static file system information
-/dev/mmcblk0p1  /boot    vfat    defaults,nofail,noauto,x-systemd.automount    0    0
+LABEL=BOOT      /boot    vfat    defaults,nofail,noauto,x-systemd.automount    0    0

@@ -127,13 +127,13 @@ if [ -f /boot/splash.conf ]; then
         fi
     done < /boot/splash.conf
 fi
-UPTIME_SEC="${SECONDS}"
-if [ -r /proc/uptime ]; then
-    read -r up _ < /proc/uptime
-    UPTIME_SEC="${up%%.*}"
-fi
-if [ "${UPTIME_SEC:-10}" -lt "$MIN_DUR" ]; then
-    sleep $((MIN_DUR - UPTIME_SEC))
+if [ -e /run/plymouth/pid ]; then
+    PLY_START=$(stat -c %Y /run/plymouth/pid 2>/dev/null || echo 0)
+    NOW_SEC=$(date +%s 2>/dev/null || echo 0)
+    PLY_ELAPSED=$((NOW_SEC - PLY_START))
+    if [ "$PLY_START" -gt 0 ] && [ "$PLY_ELAPSED" -ge 0 ] && [ "$PLY_ELAPSED" -lt "$MIN_DUR" ]; then
+        sleep $((MIN_DUR - PLY_ELAPSED))
+    fi
 fi
 
 # Jika plymouth masih berjalan, tutup dan tunggu agar Plymouth melepaskan DRM master ke SDL2

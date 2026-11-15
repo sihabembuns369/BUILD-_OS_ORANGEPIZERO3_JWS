@@ -59,7 +59,7 @@ with open(src, 'rb') as f_in, zipfile.ZipFile(dst, 'w', compression=zipfile.ZIP_
     zinfo = zipfile.ZipInfo(filename='orangepi_zero3_jws.img', date_time=time.localtime(time.time())[:6])
     zinfo.compress_type = zipfile.ZIP_DEFLATED
     zinfo.external_attr = 0o644 << 16
-    with z_out.open(zinfo, 'w') as f_out:
+    with z_out.open(zinfo, 'w', force_zip64=True) as f_out:
         while True:
             chunk = f_in.read(chunk_size)
             if not chunk:

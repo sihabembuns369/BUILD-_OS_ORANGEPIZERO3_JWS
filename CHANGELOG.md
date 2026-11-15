@@ -1,5 +1,27 @@
 # CHANGELOG
 
+## [2026-11-15] Kompilasi Ulang Menyeluruh: Perbaikan HDMI/Splash (`sun50i-h618-orangepi-zero3.dtb` & `ZRAM`), Perbaikan Rootfs 100% Penuh, dan Pemisahan Tegas UART/HDMI
+- Apa yang diubah:
+  - **1. Akar Masalah HDMI Blank & Splash Tidak Tampil / Kacau di Orange Pi Zero 3**:
+    - `output/Image` (`#9`) sebelumnya tidak sinkron dengan modul di `overlay/lib/modules/6.1.31`, dan `output/sun50i-h618-orangepi-zero3.dtb` lebih lama dari `.dts` serta memiliki typo `status = "diabled";` pada `&ahub_dam_plat` di [sun50i-h618-orangepi-zero3.dts](file:///home/riski/ORANGEPI_ZERO3/linux/arch/arm64/boot/dts/allwinner/sun50i-h618-orangepi-zero3.dts#L404).
+    - Driver kernel `CONFIG_DRM_DISPLAY_CONNECTOR` dan `CONFIG_DRM_SIMPLE_BRIDGE` sebelumnya dikompilasi sebagai modul (`=m`), bukan built-in (`=y`), sementara `CONFIG_LOGO=y` sempat aktif dan menimpa `fb0`.
+    - Parameter `video=HDMI-A-1:edid` pada commit `87f3276` menyebabkan kegagalan negosiasi mode di TV/monitor tertentu (terbatas ke `1024x768`), sehingga dikembalikan menjadi `video=HDMI-A-1:1280x720@60D` dengan `cma=128M` di [04_create_image.sh](file:///home/riski/JWS_ORANGEPI_BUILDLINUX/scripts/04_create_image.sh).
+    - `plymouth-start.service` belum memiliki urutan `After=systemd-udev-trigger.service systemd-udevd.service`, dan `jws.service` sempat memanggil `plymouth quit` di `ExecStartPre`, serta `/opt/jws/jws` menghitung `MIN_DURATION` dari uptime Linux bukan dari waktu mulai Plymouth (`/run/plymouth/pid`).
+  - **2. Akar Masalah Rootfs 100% Penuh (`No space left on device` pada Mesa shader cache & journald)**:
+    - Kernel `6.1.31` sebelumnya tidak mengaktifkan `CONFIG_ZRAM`, sehingga `zram-swap.service` gagal `modprobe zram` lalu membuat `/swapfile` 128 MB yang menghabiskan seluruh sisa blok di `rootfs_compact.img` (sisa awal 120 MB).
+    - Mengaktifkan `CONFIG_ZSMALLOC=y`, `CONFIG_ZRAM=y`, `CONFIG_CRYPTO_LZ4=y`, `CONFIG_LZ4_COMPRESS=y`, dan `CONFIG_ZRAM_DEF_COMP_LZ4=y` pada kernel `6.1.31` (`#11`) dan menyimpannya ke [kernel_arm64_defconfig](file:///home/riski/JWS_ORANGEPI_BUILDLINUX/configs/kernel_arm64_defconfig).
+    - Memperbarui [zram-swap.service](file:///home/riski/JWS_ORANGEPI_BUILDLINUX/overlay/etc/systemd/system/zram-swap.service) untuk memeriksa `/dev/zram0` terlebih dahulu dan membatasi fallback `/swapfile` hanya jika ruang bebas `/` > 256 MB.
+    - Memperbesar `rootfs_compact.img` menjadi `2000M` (ruang bebas `/`: ~412 MB saat uji di QEMU) dan menyesuaikan `IMAGE_SIZE_MB=2120` di [04_create_image.sh](file:///home/riski/JWS_ORANGEPI_BUILDLINUX/scripts/04_create_image.sh).
+  - **3. Perbaikan Pemisahan Konsol UART vs HDMI, `fstab`, `run_orangepi.sh`, dan Kompilasi Ulang**:
+    - Mengubah `/etc/fstab` dari `/dev/mmcblk0p1` ke `LABEL=BOOT` dan menghapus modul `uwe5622_bsp_sdio`/`sprdwl_ng` dari `/etc/modules` agar tidak menyebabkan hang/timeout saat boot di QEMU (tetap dimuat di perangkat keras Orange Pi lewat `/opt/jws/jws`).
+    - Memastikan cmdline `console=tty1 console=ttyS0,115200 systemd.show_status=1 quiet splash loglevel=3 plymouth.ignore-serial-consoles vt.global_cursor_default=0` agar semua pesan boot (`[ OK ]`) hanya muncul di UART (`ttyS0`/`ttyAMA0`) dan layar HDMI murni menampilkan Plymouth splash lalu aplikasi JWS.
+    - Memperbarui [run_orangepi.sh](file:///home/riski/JWS_ORANGEPI_BUILDLINUX/overlay/opt/jws/run_orangepi.sh) agar menghentikan `jws.service` & Plymouth sebelum menjalankan `/opt/jws/jws` saat uji manual (menghindari error `KMSDRM not available`).
+    - Mengompilasi ulang [libjws_perf.so](file:///home/riski/JWS_ORANGEPI_BUILDLINUX/overlay/usr/lib/aarch64-linux-gnu/libjws_perf.so) dari [libjws_perf.c](file:///home/riski/JWS_ORANGEPI_BUILDLINUX/scripts/libjws_perf.c).
+  - **Hasil Uji QEMU (`task-1263` & `task-1269`)**:
+    - Boot ke prompt serial auto-login `jws` + tampilan Plymouth (`1280x720`, non-black) -> transisi ke `jadwalsholat_imgui` (`1280x720`, 100% UI tampil), `0` failed systemd units, `/dev/zram0` aktif 256 MB, `/boot` & `/` bersih (`412M` free), SSH `jws` aktif dan SSH `root` ditolak.
+    - Output fisik HDMI di board, IR hardware nyata, RTC DS3231, Audio ALSA, WiFi/BT fisik: **perlu uji di board fisik**.
+- File/komponen terdampak: `configs/kernel_arm64_defconfig`, `overlay/etc/fstab`, `overlay/etc/modules`, `overlay/etc/systemd/system/plymouth-start.service`, `overlay/etc/systemd/system/jws.service`, `overlay/etc/systemd/system/zram-swap.service`, `overlay/opt/jws/jws`, `overlay/opt/jws/run_orangepi.sh`, `overlay/usr/lib/aarch64-linux-gnu/libjws_perf.so`, `scripts/04_create_image.sh`, `CHANGELOG.md`.
+
 ## [2026-11-15] Pemulihan Boot Total: Eliminasi GPU Bus Freeze (Blacklist Panfrost), Pulihkan CMA 128M & Video Mode HDMI, dan Aktifkan systemd.show_status
 - Apa yang diubah:
   - **Akar Masalah Freeze di `Mounted boot.mount`**:

@@ -14,7 +14,7 @@ echo "=========================================================="
 
 IMAGE_NAME="orangepi_zero3_jws.img"
 IMAGE_PATH="${OUTPUT_DIR}/${IMAGE_NAME}"
-IMAGE_SIZE_MB=1780  # ~1.7GB total disk image (bebas bloatware, hemat tempat SD card)
+IMAGE_SIZE_MB=2120  # ~2.07GB total disk image (rootfs 2000MB + 96MB BOOT, ruang bebas aman)
 BOOT_SIZE_MB=96     # 96MB FAT32 boot partition (cukup untuk kernel + DTB + splash)
 
 mkdir -p "${OUTPUT_DIR}" "${BUILD_DIR}/staging_boot"
@@ -54,7 +54,7 @@ cat << 'EOF' > "${STAGING_BOOT}/boot.cmd"
 setenv fdtfile sun50i-h618-orangepi-zero3.dtb
 setenv rootdev /dev/mmcblk0p2
 setenv kernel_addr_r 0x40200000
-setenv bootargs "earlycon console=tty1 console=ttyS0,115200 root=${rootdev} rootwait rw cma=192M systemd.show_status=1 splash loglevel=7 plymouth.ignore-serial-consoles vt.global_cursor_default=0 initcall_blacklist=panfrost_driver_init"
+setenv bootargs "earlycon console=tty1 console=ttyS0,115200 root=${rootdev} rootwait rw cma=128M systemd.show_status=1 quiet splash loglevel=3 plymouth.ignore-serial-consoles vt.global_cursor_default=0 initcall_blacklist=panfrost_driver_init video=HDMI-A-1:1280x720@60D"
 
 echo "==> Memuat kernel Image ke ${kernel_addr_r}..."
 if fatload mmc 0:1 ${kernel_addr_r} Image; then
@@ -87,7 +87,7 @@ cat << 'EOF' > "${STAGING_BOOT}/extlinux/extlinux.conf"
 LABEL OrangePi_Zero3_JWS
     LINUX /Image
     FDT /sun50i-h618-orangepi-zero3.dtb
-    APPEND earlycon console=tty1 console=ttyS0,115200 root=/dev/mmcblk0p2 rootwait rw cma=192M systemd.show_status=1 splash loglevel=7 plymouth.ignore-serial-consoles vt.global_cursor_default=0 initcall_blacklist=panfrost_driver_init
+    APPEND earlycon console=tty1 console=ttyS0,115200 root=/dev/mmcblk0p2 rootwait rw cma=128M systemd.show_status=1 quiet splash loglevel=3 plymouth.ignore-serial-consoles vt.global_cursor_default=0 initcall_blacklist=panfrost_driver_init video=HDMI-A-1:1280x720@60D
 EOF
 
 # Sediakan uEnv.txt di root partisi FAT32 untuk kompatibilitas firmware U-Boot legacy
@@ -95,8 +95,8 @@ cat << 'EOF' > "${STAGING_BOOT}/uEnv.txt"
 fdtfile=sun50i-h618-orangepi-zero3.dtb
 rootdev=/dev/mmcblk0p2
 kernel_addr_r=0x40200000
-extraargs=cma=192M
-bootargs=earlycon console=tty1 console=ttyS0,115200 root=/dev/mmcblk0p2 rootwait rw cma=192M systemd.show_status=1 splash loglevel=7 plymouth.ignore-serial-consoles vt.global_cursor_default=0 initcall_blacklist=panfrost_driver_init
+extraargs=cma=128M
+bootargs=earlycon console=tty1 console=ttyS0,115200 root=/dev/mmcblk0p2 rootwait rw cma=128M systemd.show_status=1 quiet splash loglevel=3 plymouth.ignore-serial-consoles vt.global_cursor_default=0 initcall_blacklist=panfrost_driver_init video=HDMI-A-1:1280x720@60D
 bootcmd=fatload mmc 0:1 0x40200000 Image; fatload mmc 0:1 ${fdt_addr_r} ${fdtfile}; booti 0x40200000 - ${fdt_addr_r}
 EOF
 
