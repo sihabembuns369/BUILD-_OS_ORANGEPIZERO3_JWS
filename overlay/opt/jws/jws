@@ -74,11 +74,10 @@ fi
     fi
 ) &
 
-# 4. Konfigurasi Rendering KMSDRM + OpenGL ES 2.0 + VSync
+# 4. Konfigurasi Rendering KMSDRM + VSync
 if [ -z "$DISPLAY" ] && [ -z "$WAYLAND_DISPLAY" ]; then
     export SDL_VIDEODRIVER=kmsdrm
 fi
-export SDL_RENDER_DRIVER=opengles2
 export SDL_RENDER_VSYNC=1
 export SDL_HINT_RENDER_BATCHING=1
 
@@ -147,8 +146,4 @@ fi
 chmod 666 /dev/input/event* /dev/input/mice /dev/input/mouse* /dev/tty1 /dev/tty0 /dev/dri/* 2>/dev/null || true
 
 echo "[JWS] Meluncurkan aplikasi jadwal salat ImGui (IR_CHIP=${IR_CHIP}, IR_LINE=${IR_LINE})..."
-if [ -r /dev/tty1 ]; then
-    exec "$APP_DIR/jadwalsholat_imgui" "$@" </dev/tty1
-else
-    exec "$APP_DIR/jadwalsholat_imgui" "$@"
-fi
+exec "$APP_DIR/jadwalsholat_imgui" "$@"

@@ -9,7 +9,7 @@ IgnoreOnIsolate=true
 
 [Service]
 ExecStartPre=-/bin/mkdir -p /run/plymouth
-ExecStart=/usr/sbin/plymouthd --mode=boot --pid-file=/run/plymouth/pid --kernel-command-line="splash plymouth.ignore-serial-consoles plymouth.ignore-udev"
+ExecStart=/usr/sbin/plymouthd --mode=boot --pid-file=/run/plymouth/pid --attach-to-session
 ExecStartPost=-/usr/bin/plymouth show-splash
 Type=forking
 RemainAfterExit=yes
