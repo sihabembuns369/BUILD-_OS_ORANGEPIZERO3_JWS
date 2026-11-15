@@ -106,7 +106,7 @@ else
     if [ -e "$DRI_DIR/kms_swrast_dri.so" ]; then
         ln -sf kms_swrast_dri.so "$DRI_DIR/sun4i-drm_dri.so" 2>/dev/null || true
     fi
-    export GBM_ALWAYS_SOFTWARE=1
+    # JANGAN export GBM_ALWAYS_SOFTWARE=1 karena merusak scanout hardware DRM/KMS ke HDMI
     export LIBGL_ALWAYS_SOFTWARE=1
     export MESA_LOADER_DRIVER_OVERRIDE=kms_swrast
     export GALLIUM_DRIVER=llvmpipe

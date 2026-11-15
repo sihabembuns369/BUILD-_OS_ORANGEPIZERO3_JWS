@@ -124,7 +124,7 @@ static void jws_perf_init(void) {
             (void)r;
         }
 
-        /* Pastikan environment variable KMSDRM + llvmpipe 1-thread selalu aktif
+        /* Pastikan environment variable KMSDRM selalu aktif
          * meskipun dijalankan manual via ./jadwalsholat_imgui di PuTTY */
         if (!getenv("DISPLAY") && !getenv("WAYLAND_DISPLAY")) {
             setenv("SDL_VIDEODRIVER", "kmsdrm", 0);
@@ -135,7 +135,8 @@ static void jws_perf_init(void) {
         setenv("SDL_HINT_RENDER_BATCHING", "1", 0);
 
         if (access("/dev/dri/renderD128", F_OK) != 0) {
-            setenv("GBM_ALWAYS_SOFTWARE", "1", 1);
+            /* CATATAN: JANGAN set GBM_ALWAYS_SOFTWARE=1 karena akan mematikan kemampuan
+             * scanout DRM KMS di /dev/dri/card0 sehingga layar HDMI blank/hitam! */
             setenv("LIBGL_ALWAYS_SOFTWARE", "1", 1);
             setenv("MESA_LOADER_DRIVER_OVERRIDE", "kms_swrast", 1);
             setenv("GALLIUM_DRIVER", "llvmpipe", 1);
