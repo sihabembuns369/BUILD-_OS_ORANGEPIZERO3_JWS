@@ -104,20 +104,23 @@ fi
 
 DRI_DIR="/usr/lib/aarch64-linux-gnu/dri"
 if [ "$HAS_HW_GL" -eq 1 ]; then
+    export SDL_RENDER_DRIVER=opengles2
     if [ -e "$DRI_DIR/panfrost_dri.so" ] && [ -e /dev/dri/renderD128 ] && [ ! -d /sys/bus/virtio/drivers/virtio_gpu ]; then
         ln -sf panfrost_dri.so "$DRI_DIR/sun4i-drm_dri.so" 2>/dev/null || true
     fi
 else
+    export SDL_RENDER_DRIVER=opengles2
     if [ -e "$DRI_DIR/kms_swrast_dri.so" ] && [ ! -d /sys/bus/virtio/drivers/virtio_gpu ]; then
         ln -sf kms_swrast_dri.so "$DRI_DIR/sun4i-drm_dri.so" 2>/dev/null || true
     fi
-    # JANGAN export GBM_ALWAYS_SOFTWARE=1 karena merusak scanout hardware DRM/KMS ke HDMI
+    # JANGAN export GBM_ALWAYS_SOFTWARE=1 karena merusak scanout hardware DRM/KMS ke HDMI.
+    # Pakai LP_NUM_THREADS=1 agar llvmpipe tidak memicu 4 worker CPU threads yang saling spin/contention.
     mkdir -p /var/cache/mesa_shader_cache 2>/dev/null || true
     export MESA_SHADER_CACHE_DIR=/var/cache/mesa_shader_cache
     export LIBGL_ALWAYS_SOFTWARE=1
     export MESA_LOADER_DRIVER_OVERRIDE=kms_swrast
     export GALLIUM_DRIVER=llvmpipe
-    export LP_NUM_THREADS=4
+    export LP_NUM_THREADS=1
     export MESA_NO_ERROR=1
     export MESA_GL_VERSION_OVERRIDE=2.1
     export MESA_GLES_VERSION_OVERRIDE=2.0

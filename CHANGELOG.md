@@ -1,5 +1,23 @@
 # CHANGELOG
 
+## [2026-11-16] Optimasi CPU Aplikasi JWS (`Static Layer Cache` 1Hz + Pre-baked `marqueeTex` + `LP_NUM_THREADS=1`)
+- Apa yang diubah:
+  - **1. Akar Masalah CPU 333% (Tampilan Ngelag / Glitch)**:
+    - Loop render utama di [jadwalsholat_imgui.cpp](file:///home/riski/JADWAL_SHOLAT_SDL/CPP_PROGRAM/src/jadwalsholat_imgui.cpp) sebelumnya menggambar ulang seluruh kanvas `1280x720` (foto slideshow, full-screen dimming alpha, top bar, 8 kartu jadwal sholat, hadits, serta running text) ~30x/detik via software rasterizer Mesa `llvmpipe`, sementara ~90% elemen layar sebenarnya statis dan hanya berubah setiap 1 detik (`curSec`) atau saat slide/hadits/modal berubah.
+    - Di samping itu, `LP_NUM_THREADS=4` pada `llvmpipe` tanpa GPU hardware menyebabkan 4 worker thread Mesa bersaing CPU (masing-masing ~500+ tick/5 detik) dan membengkakkan VSZ hingga ~1 GB.
+  - **2. Optimasi Aplikasi JWS (`CPP_PROGRAM`) & Biner ARM64**:
+    - Menambahkan `DashboardMarqueeStrip` dan flag `updateHadits` pada [MainDashboard.hpp](file:///home/riski/JADWAL_SHOLAT_SDL/CPP_PROGRAM/include/MainDashboard.hpp) dan [MainDashboard.cpp](file:///home/riski/JADWAL_SHOLAT_SDL/CPP_PROGRAM/src/MainDashboard.cpp) (serta accessor `IsFileBrowserOpen()` / `IsOpen()` / `IsTransitioning()` / `GetCurrentIndex()` di [SettingsModal.hpp](file:///home/riski/JADWAL_SHOLAT_SDL/CPP_PROGRAM/include/SettingsModal.hpp), [LayoutDesigner.hpp](file:///home/riski/JADWAL_SHOLAT_SDL/CPP_PROGRAM/include/LayoutDesigner.hpp), dan [SlideshowManager.hpp](file:///home/riski/JADWAL_SHOLAT_SDL/CPP_PROGRAM/include/SlideshowManager.hpp)).
+    - Menambahkan cache target `staticCacheTex` (`SDL_TEXTUREACCESS_TARGET`, `SDL_BLENDMODE_NONE`) di [jadwalsholat_imgui.cpp](file:///home/riski/JADWAL_SHOLAT_SDL/CPP_PROGRAM/src/jadwalsholat_imgui.cpp) yang hanya me-render ulang dashboard ketika detik tampilan/slide/hadits/kas/tema/pengaturan berubah (~1x/detik), otomatis bypass penuh saat modal/sidebar/keyboard virtual/IqomahOverlay/transisi slide/animasi Zoom aktif, serta pre-bake strip teks berjalan ke `marqueeTex` dengan `TARGET_FRAME_MS=50` (~20 FPS, kecepatan berbasis `realDt` agar tetap halus tanpa lag).
+    - Mengompilasi ulang biner ARM64 lewat [build_orangepi.sh](file:///home/riski/JADWAL_SHOLAT_SDL/CPP_PROGRAM/build_orangepi.sh) ke [jadwalsholat_imgui](file:///home/riski/JWS_ORANGEPI_BUILDLINUX/overlay/opt/jws/jadwalsholat_imgui) (`md5sum 15805cf402759f514ccd3c3e400fe9e0`).
+  - **3. Penyetelan Renderer KMSDRM Single-Thread (`LP_NUM_THREADS=1`)**:
+    - Memperbarui [jws](file:///home/riski/JWS_ORANGEPI_BUILDLINUX/overlay/opt/jws/jws), [libjws_perf.c](file:///home/riski/JWS_ORANGEPI_BUILDLINUX/scripts/libjws_perf.c), dan [libjws_perf.so](file:///home/riski/JWS_ORANGEPI_BUILDLINUX/overlay/usr/lib/aarch64-linux-gnu/libjws_perf.so) agar menggunakan `SDL_RENDER_DRIVER=opengles2` dengan `LP_NUM_THREADS=1` saat tidak ada GPU hardware (`/dev/dri/renderD128`), sehingga tidak ada kontensi 4-thread `llvmpipe`.
+  - **Hasil Uji QEMU (`task-1883`)**:
+    - Benchmark OS **tanpa JWS**: `CPU: 6.7% usr 6.0% sys 85.9% idle` (memastikan OS latar belakang bersih, bukan penyebab CPU tinggi).
+    - Benchmark JWS **sebelum optimasi**: `jadwalsholat_imgui` memakan **`69.2%–72.0%`** CPU sistem (`~277%–333%` skala multi-core), `23.5% idle`, `1047MB` VSZ.
+    - Benchmark JWS **sesudah optimasi (`task-1883`)**: `jadwalsholat_imgui` turun ke **`23.4%–24.4%`** total CPU (`22.1–25.4% usr`, `2.4–3.9% sys`), sistem **`73.7%–74.3% idle`**, memori RSS **`106 MB`**, `0 loaded units` failed (`jws.service` active), screenshot `1280x720` (`final_dash_t1.png` → `final_dash_t2.png`) tajam tanpa glitch dengan teks berjalan bergeser normal.
+    - Kelancaran animasi di HDMI fisik Orange Pi Zero 3: **perlu uji di board fisik**.
+- File/komponen terdampak: `overlay/opt/jws/jadwalsholat_imgui`, `overlay/opt/jws/jws`, `scripts/libjws_perf.c`, `overlay/usr/lib/aarch64-linux-gnu/libjws_perf.so`, `CHANGELOG.md` (dan sumber aplikasi di `/home/riski/JADWAL_SHOLAT_SDL/CPP_PROGRAM`).
+
 ## [2026-11-16] Perbaikan Performa UI (4-Thread OpenGL ES 2.0 Tanpa Throttle Ganda) & Perbaikan Scan Wi-Fi (`wpa_cli` / BusyBox `pgrep` / `iw` / `rfkill`)
 - Apa yang diubah:
   - **1. Akar Masalah Aplikasi JWS Ngelag Parah & Patah-Patah**:

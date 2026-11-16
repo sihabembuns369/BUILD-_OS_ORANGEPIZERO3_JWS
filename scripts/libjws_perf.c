@@ -65,7 +65,7 @@ static void jws_perf_init(void) {
             setenv("LIBGL_ALWAYS_SOFTWARE", "1", 1);
             setenv("MESA_LOADER_DRIVER_OVERRIDE", "kms_swrast", 1);
             setenv("GALLIUM_DRIVER", "llvmpipe", 1);
-            setenv("LP_NUM_THREADS", "4", 0);
+            setenv("LP_NUM_THREADS", "1", 0);
             setenv("MESA_NO_ERROR", "1", 0);
             setenv("MESA_GL_VERSION_OVERRIDE", "2.1", 1);
             setenv("MESA_GLES_VERSION_OVERRIDE", "2.0", 1);
