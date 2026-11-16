@@ -1,5 +1,20 @@
 # CHANGELOG
 
+## [2026-11-17] Perbaikan Kerning Teks Layar Loading & Penghapusan Garis Pemisah/Aksen di Semua Layout & Tema
+- Apa yang diubah:
+  - **1. Perbaikan Jarak Huruf Layar Loading (`StartupScreen.cpp`)**:
+    - `DrawBitmapText` dan `GetTextWidth` pada [StartupScreen.cpp](file:///home/riski/JADWAL_SHOLAT_SDL/CPP_PROGRAM/src/StartupScreen.cpp) sebelumnya menggunakan advance sel tetap (`8 * scale` px) dari [StartupFont.hpp](file:///home/riski/JADWAL_SHOLAT_SDL/CPP_PROGRAM/include/StartupFont.hpp), sehingga huruf ramping (`I`, `J`, `L`, `i`, `l`, `t`) menghasilkan jarak kosong lebar (`J ADWAL`, `DI GI TAL`, `SI STEM`).
+    - Menambahkan helper `GetGlyphMetrics` untuk menghitung batas piksel aktif (`minCol..maxCol`) dan lebar advance proporsional (`+1px` jarak antar huruf, `5px` untuk spasi) agar seluruh teks (`JADWAL SHOLAT DIGITAL`, subjudul, persentase, dan status) tampil rapat, rapi, dan simetris di tengah layar.
+  - **2. Penghapusan Garis Pemisah/Aksen Horizontal di Seluruh Layout & Tema**:
+    - [KasManager.hpp](file:///home/riski/JADWAL_SHOLAT_SDL/CPP_PROGRAM/include/KasManager.hpp): menghapus garis aksen emas pada tepi atas kartu `RenderKasSlide` (`goldStripeW`) dan kartu `TOTAL SALDO AKHIR`.
+    - [LayoutDesigner.cpp](file:///home/riski/JADWAL_SHOLAT_SDL/CPP_PROGRAM/src/LayoutDesigner.cpp): menghapus garis pemisah jam pada `RenderWidgetClock`, garis batas atas `RenderWidgetMarquee`, serta garis strip tepi atas pada `RenderWidgetKas` dan `RenderWidgetOfficers`.
+    - [MainDashboard.cpp](file:///home/riski/JADWAL_SHOLAT_SDL/CPP_PROGRAM/src/MainDashboard.cpp): menghapus garis pemisah/aksen horizontal pada header top bar, pemisah jam `TVBoxCardCanvas`, pemisah atas hadits/running-text marquee (`SLIDESHOW_FULLSCREEN`, `MODERN_BOX_CARD`, `SIDE_SCHEDULE_HERO`), serta pemisah dalam kartu `CLASSIC_CENTERED`.
+- Hasil verifikasi QEMU & Deploy:
+  - Kompilasi ARM64 menghasilkan [jadwalsholat_imgui](file:///home/riski/JWS_ORANGEPI_BUILDLINUX/overlay/opt/jws/jadwalsholat_imgui) (`md5sum 97fff7c84ed221aa8f3bf8b4ef53c6f1`) dan image `orangepi_zero3_jws.img` (`2.1G`).
+  - Uji visual QEMU (`task-2541`) melalui `loading_fixed.png` dan `dashboard_clean.png` memverifikasi teks loading proporsional/rapi dan tampilan dashboard bersih tanpa garis pemisah horizontal.
+  - Image & paket `.zip` (`573.8 MB`) dideploy ke Windows melalui [deploy_to_windows.sh](file:///home/riski/JWS_ORANGEPI_BUILDLINUX/deploy_to_windows.sh).
+- File/komponen terdampak: `overlay/opt/jws/jadwalsholat_imgui`, `CHANGELOG.md` (dan sumber aplikasi di `/home/riski/JADWAL_SHOLAT_SDL/CPP_PROGRAM/{src/StartupScreen.cpp,include/KasManager.hpp,src/LayoutDesigner.cpp,src/MainDashboard.cpp}`).
+
 ## [2026-11-17] Modernisasi Header/Tab `TVSidebar`, Kartu Wi-Fi Modern, Perbaikan Lag Tab Wi-Fi, & Data Dummy Wi-Fi QEMU
 - Apa yang diubah:
   - **1. Perapian Header & Tab `TVSidebar` ([TVSidebar.cpp](file:///home/riski/JADWAL_SHOLAT_SDL/CPP_PROGRAM/src/TVSidebar.cpp))**:
