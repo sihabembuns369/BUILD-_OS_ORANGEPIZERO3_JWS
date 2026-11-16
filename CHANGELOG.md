@@ -1,5 +1,23 @@
 # CHANGELOG
 
+## [2026-11-17] Modernisasi Header/Tab `TVSidebar`, Kartu Wi-Fi Modern, Perbaikan Lag Tab Wi-Fi, & Data Dummy Wi-Fi QEMU
+- Apa yang diubah:
+  - **1. Perapian Header & Tab `TVSidebar` ([TVSidebar.cpp](file:///home/riski/JADWAL_SHOLAT_SDL/CPP_PROGRAM/src/TVSidebar.cpp))**:
+    - Menghapus baris petunjuk `>> Panah / Enter / 1-3` pada header sidebar dan menyejajarkan judul `PENGATURAN CEPAT TV` dengan tombol `TUTUP` dalam satu baris rapi.
+    - Menghapus penomoran `1. / 2. / 3.` serta awalan `> ` pada tombol tab menjadi `Remote | Pengaturan | Wi-Fi`, dengan perhitungan lebar tombol proporsional terhadap `ImGui::CalcTextSize` agar label `Pengaturan` tidak lagi terpotong.
+    - Mengunci reset posisi scroll (`ImGui::SetNextWindowScroll(ImVec2(0.0f, 0.0f))`) saat berpindah tab dan menghitung tinggi `##WifiNetworkList` secara dinamis dari tinggi layar agar muat penuh pada resolusi 720p tanpa scroll berlebih.
+  - **2. Desain Kartu Daftar Wi-Fi Modern & Elegan ([UIWidgets.hpp](file:///home/riski/JADWAL_SHOLAT_SDL/CPP_PROGRAM/include/UIWidgets.hpp), [UIWidgets.cpp](file:///home/riski/JADWAL_SHOLAT_SDL/CPP_PROGRAM/src/UIWidgets.cpp), [SettingsModal.cpp](file:///home/riski/JADWAL_SHOLAT_SDL/CPP_PROGRAM/src/SettingsModal.cpp))**:
+    - Menambahkan komponen bersama `UIWidgets::RenderWifiNetworkCard` berisi kartu membulat dengan aksen sisi kiri, status `TERHUBUNG`, pill keamanan `TERBUKA` / ikon gembok vektor + jenis enkripsi (`WPA2`/`WPA3`), serta indikator sinyal 4-bar dan persentase sinyal (`%`), lengkap dengan dukungan fokus navigasi keyboard (`Enter`/`Space`).
+    - Memperbarui tampilan status koneksi dan tombol pindai Wi-Fi di `TVSidebar` serta menyamakan daftar jaringan Wi-Fi pada tab Wi-Fi `SettingsModal`.
+  - **3. Penghapusan Lag Tab Wi-Fi & Dukungan Data Dummy Wi-Fi QEMU ([WifiManager.hpp](file:///home/riski/JADWAL_SHOLAT_SDL/CPP_PROGRAM/include/WifiManager.hpp))**:
+    - Mengatasi lag berat/patah-patah saat membuka tab Wi-Fi akibat `WiFiManager::getConnectedSSID()` memanggil `popen()` (`iw`/`iwgetid`/`wpa_cli`) berulang tiap frame UI: kini memakai non-blocking cache dengan penyegaran asinkron per 3 detik dan `fs::exists` langsung untuk cek `nmcli`.
+    - Menambahkan deteksi lingkungan QEMU (`isQEMU()` via `/proc/device-tree/compatible` `"dummy-virt"`) + pengecekan ketiadaan Wi-Fi fisik (`hasPhysicalWirelessHardware()`) untuk menyajikan 6 SSID dummy simulasi (`WIFI_KANTOR_DKM`, `MASJID_FREE_WIFI`, `HOTSPOT_WARGA`, dll.) instan di QEMU tanpa memengaruhi perilaku hardware Wi-Fi nyata di Orange Pi Zero 3.
+- Hasil verifikasi QEMU & Deploy:
+  - Kompilasi ARM64 menghasilkan [jadwalsholat_imgui](file:///home/riski/JWS_ORANGEPI_BUILDLINUX/overlay/opt/jws/jadwalsholat_imgui) (`md5sum b0090b0a7115726a5ec8422b6cde63c7`) dan image `orangepi_zero3_jws.img` (`2.1G`).
+  - Uji visual QEMU (`task-2446`) memastikan header tanpa petunjuk, tab `Remote | Pengaturan | Wi-Fi` utuh tanpa terpotong, daftar 6 jaringan dummy QEMU tampil instan dalam bentuk kartu modern tanpa lag, serta seluruh tab Wi-Fi muat rapi di `1280x720`.
+  - Image & paket `.zip` (`573.8 MB`) dideploy ke Windows melalui [deploy_to_windows.sh](file:///home/riski/JWS_ORANGEPI_BUILDLINUX/deploy_to_windows.sh).
+- File/komponen terdampak: `overlay/opt/jws/jadwalsholat_imgui`, `CHANGELOG.md` (dan sumber aplikasi di `/home/riski/JADWAL_SHOLAT_SDL/CPP_PROGRAM/{include/WifiManager.hpp,include/UIWidgets.hpp,src/UIWidgets.cpp,src/TVSidebar.cpp,src/SettingsModal.cpp}`).
+
 ## [2026-11-16] Perbaikan Z-Order, Lebar, dan Aktivasi Keyboard/Remot Popup Konfirmasi Restart/Shutdown & QR Modal
 - Apa yang diubah:
   - **1. Akar Masalah Popup Konfirmasi Daya Tertutup `TVSidebar` & Terpotong**:
