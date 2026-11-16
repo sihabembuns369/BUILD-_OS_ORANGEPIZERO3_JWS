@@ -1,5 +1,20 @@
 # CHANGELOG
 
+## [2026-11-16] Perbaikan Z-Order, Lebar, dan Aktivasi Keyboard/Remot Popup Konfirmasi Restart/Shutdown & QR Modal
+- Apa yang diubah:
+  - **1. Akar Masalah Popup Konfirmasi Daya Tertutup `TVSidebar` & Terpotong**:
+    - `TVSidebar::Render` sebelumnya menggambar overlay dimming lewat `ImGui::GetForegroundDrawList()` (menutupi sisi kiri modal), serta `##AndroidTVSidebar` berada di lapisan atas jendela sehingga menutupi sisi kanan dialog konfirmasi `RESTART`/`SHUTDOWN` (`RenderPowerModal`) dan `RenderQRModal`.
+    - Ukuran tetap modal `500x240` juga terlalu sempit untuk judul `KONFIRMASI MATIKAN DAYA (SHUTDOWN)` dan simbol Unicode tertentu (`🔄`/`⏻`) tampil sebagai `?`.
+  - **2. Perbaikan ([UIWidgets.cpp](file:///home/riski/JADWAL_SHOLAT_SDL/CPP_PROGRAM/src/UIWidgets.cpp) & [TVSidebar.cpp](file:///home/riski/JADWAL_SHOLAT_SDL/CPP_PROGRAM/src/TVSidebar.cpp))**:
+    - Menambahkan `RenderModalBackdropWindow` fullscreen dan `ImGui::BringWindowToDisplayFront` pada `RenderPowerModal` serta `RenderQRModal` agar selalu berada di lapisan paling depan di atas `TVSidebar` dan `SettingsModal`.
+    - Memindahkan dimming sidebar `TVSidebar` ke `GetBackgroundDrawList()` serta melewati overlay & penutupan klik-luar saat modal/keyboard virtual aktif, dan menambahkan `ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoInputs`.
+    - Menghitung lebar `PowerModal` secara dinamis berdasarkan lebar judul (`clamp(max(560, titleW+68), 420, W-40)`), mengganti ikon dengan `[!]` serta `PushTextWrapPos` agar seluruh teks rapi tanpa terpotong.
+    - Menambahkan aktivasi tombol `Enter`/`KeypadEnter`/`Space` pada `[OK] Buka Pengaturan Lengkap`, `RESTART`, `SHUTDOWN`, `SIMPAN & KELUAR`, dan `TUTUP MENU` di `TVSidebar`.
+    - Memastikan [jws](file:///home/riski/JWS_ORANGEPI_BUILDLINUX/overlay/opt/jws/jws) memakai `SDL_RENDER_DRIVER=opengles2` dengan `LP_NUM_THREADS=1` saat tanpa GPU hardware (`/dev/dri/renderD128`).
+  - **Hasil Uji QEMU (`task-2112`, `task-2162`, & uji visual akhir)**:
+    - Screenshot `modal_power_v5.png` / `modal_power_v6.png` memverifikasi dialog `KONFIRMASI MATIKAN DAYA (SHUTDOWN)` tampil utuh di lapisan paling depan di atas `TVSidebar` tanpa terpotong; CPU `jadwalsholat_imgui` tetap rendah (~`24.0%–24.2%`, `72.4%–72.9%` idle, `104–106m` RSS) dengan `[JWS-PERF] SDL video=KMSDRM renderer=opengles2 flags=0xe LP_NUM_THREADS=1`.
+- File/komponen terdampak: `overlay/opt/jws/jadwalsholat_imgui`, `overlay/opt/jws/jws`, `CHANGELOG.md` (dan sumber aplikasi di `/home/riski/JADWAL_SHOLAT_SDL/CPP_PROGRAM/src/{UIWidgets.cpp,TVSidebar.cpp}`).
+
 ## [2026-11-16] Optimasi CPU Aplikasi JWS (`Static Layer Cache` 1Hz + Pre-baked `marqueeTex` + `LP_NUM_THREADS=1`)
 - Apa yang diubah:
   - **1. Akar Masalah CPU 333% (Tampilan Ngelag / Glitch)**:
