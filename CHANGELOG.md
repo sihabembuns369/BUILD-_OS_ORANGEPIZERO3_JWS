@@ -1,5 +1,18 @@
 # CHANGELOG
 
+## [2026-11-17] Perbaikan Kontrol Navigasi Keyboard/Remot & Fokus Tab `Layout & Tema` Saat Ganti Tema
+- Apa yang diubah:
+  - **1. Penyatuan `UIWidgets::TVCombo` & Preservasi Fokus Across Theme Switch ([UIWidgets.hpp](file:///home/riski/JADWAL_SHOLAT_SDL/CPP_PROGRAM/include/UIWidgets.hpp), [UIWidgets.cpp](file:///home/riski/JADWAL_SHOLAT_SDL/CPP_PROGRAM/src/UIWidgets.cpp), [TVSidebar.cpp](file:///home/riski/JADWAL_SHOLAT_SDL/CPP_PROGRAM/src/TVSidebar.cpp), [SettingsModal.cpp](file:///home/riski/JADWAL_SHOLAT_SDL/CPP_PROGRAM/src/SettingsModal.cpp))**:
+    - Menambahkan komponen bersama `UIWidgets::TVCombo` sehingga `SettingsModal.cpp` dan `TVSidebar.cpp` tidak lagi menduplikasi implementasi `TVCombo`.
+    - Mempertahankan ID fokus pada kontrol aktif (`<###Prev`, `###ComboVal`, maupun `>###Next`) melalui `ImGui::SetFocusID(preserveFocusId, navWin)` (resolusi `RootWindowForNav`) dan memaksa `g->NavCursorVisible = true` setiap kali nilai berubah atau `UIWidgets::ApplyTheme` dijalankan.
+  - **2. Perbaikan Fokus Masuk Panel Konten & Navigasi Panah Kiri `SettingsModal` ([SettingsModal.cpp](file:///home/riski/JADWAL_SHOLAT_SDL/CPP_PROGRAM/src/SettingsModal.cpp))**:
+    - Mengubah `BeginChild("SettingsTabContentWrapper")` dari `ImGuiChildFlags_NavFlattened` menjadi ruang lingkup navigasi independen (`0`) dan memanggil `ImGui::SetNextWindowFocus()` secara simetris pada `SettingsNavRail` (saat kembali) maupun `SettingsTabContentWrapper` (saat masuk konten), mencegah `SetNextWindowFocus()` dan `SetKeyboardFocusHere(0)` gagal akibat child `NavFlattened` serta `ImGuiNavMoveFlags_NoSetNavCursorVisible`.
+    - Menghindari `LeftArrow` di dalam `s_FocusInContent` langsung melempar fokus keluar ke menu tab kiri; `Panah Kiri` kini bergerak normal antar kontrol horizontal (`>` → `Combo` → `<`, tombol sejajar, dsb.) dan baru kembali ke menu tab kiri saat berada di tepi kiri (`NavId` tidak bergeser) atau lewat `ESC` / `Backspace` / tombol `< Kembali ke Menu Tab`.
+- Hasil verifikasi QEMU & Deploy:
+  - Kompilasi ARM64 menghasilkan [jadwalsholat_imgui](file:///home/riski/JWS_ORANGEPI_BUILDLINUX/overlay/opt/jws/jadwalsholat_imgui) (`md5sum c935d8e50765ff0e961d54bd34f79ffd`) dan image [orangepi_zero3_jws.img](file:///home/riski/JWS_ORANGEPI_BUILDLINUX/output/orangepi_zero3_jws.img) (`2.1G`).
+  - Uji visual QEMU (`task-2777` dan `task-2786`) memastikan fokus berpindah masuk ke konten `Layout & Tema`, tetap bertahan jelas dengan bingkai fokus emas pada kontrol `TVCombo` saat mengganti tema (mis. menuju `Tema 6: Ottoman Purple`), serta panah kiri di dalam `TVCombo` dan pergantian tipe media tetap mempertahankan kursor fokus tanpa terlempar.
+- File/komponen terdampak: `overlay/opt/jws/jadwalsholat_imgui`, `CHANGELOG.md` (dan sumber aplikasi di `/home/riski/JADWAL_SHOLAT_SDL/CPP_PROGRAM/{include/UIWidgets.hpp,src/UIWidgets.cpp,src/TVSidebar.cpp,src/SettingsModal.cpp}`).
+
 ## [2026-11-17] Perbaikan Navigasi Keyboard/Remot Per-Kartu pada Daftar Jaringan Wi-Fi
 - Apa yang diubah:
   - **1. Akar Masalah Daftar Wi-Fi Dianggap Satu Kotak Tunggal Saat Navigasi Keyboard**:
