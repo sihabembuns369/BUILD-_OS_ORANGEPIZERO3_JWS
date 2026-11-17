@@ -2,6 +2,7 @@
 Description=Jadwal Waktu Salat (JWS) SDL2 Kiosk Application
 After=systemd-user-sessions.service plymouth-start.service splash-apply.service systemd-udev-trigger.service
 Conflicts=getty@tty1.service
+StartLimitIntervalSec=0
 
 [Service]
 Type=simple
@@ -19,6 +20,7 @@ ExecStartPre=+/bin/sh -c 'chmod -R 666 /dev/dri/* /dev/fb* /dev/input/* /dev/tty
 ExecStart=/usr/local/bin/jws-app
 Restart=always
 RestartSec=3
+TimeoutStopSec=10
 
 [Install]
 WantedBy=graphical.target multi-user.target

@@ -1,5 +1,18 @@
 # CHANGELOG
 
+## [2026-11-17] Hardening Stabilitas 24/7 Nonstop & Optimasi Lanjutan Decode Video
+- Apa yang diubah ([VideoStreamPlayer.cpp](file:///home/riski/JADWAL_SHOLAT_SDL/CPP_PROGRAM/src/VideoStreamPlayer.cpp), [jadwalsholat_imgui.cpp](file:///home/riski/JADWAL_SHOLAT_SDL/CPP_PROGRAM/src/jadwalsholat_imgui.cpp), [jws.service](file:///home/riski/JWS_ORANGEPI_BUILDLINUX/overlay/etc/systemd/system/jws.service), [99-jws-24x7.conf](file:///home/riski/JWS_ORANGEPI_BUILDLINUX/overlay/etc/systemd/journald.conf.d/99-jws-24x7.conf)):
+  - **1. Penurunan Beban Decode & Render Video**:
+    - Menambahkan `skip_loop_filter = AVDISCARD_ALL`, `flags2 |= AV_CODEC_FLAG2_FAST`, skala target `480×270` (`virtio_gpu`) / `640×360` (hardware), `SWS_POINT` saat downscale > 1.25×, serta membatasi interval upload GPU (`62 ms` QEMU / `45 ms` HW) dan render mode video (`66 ms` VirGL / `45 ms` HW) sambil tetap menjaga `frameDurationUs` sesuai FPS asli stream.
+    - Menghapus `SDL_RenderClear()` berlebih ketika `staticCacheTex` menutup penuh area di luar bingkai video (`!cachedVideoFullscreen`).
+  - **2. Hardening OS untuk Operasi Kiosk 24/7 Nonstop**:
+    - Menambahkan [99-jws-24x7.conf](file:///home/riski/JWS_ORANGEPI_BUILDLINUX/overlay/etc/systemd/journald.conf.d/99-jws-24x7.conf) (`Storage=volatile`, `RuntimeMaxUse=16M`, `MaxRetentionSec=1day`) agar log sistem tidak menghabiskan RAM 512MB maupun menulis berulang ke microSD selama berbulan-bulan.
+    - Menambahkan `StartLimitIntervalSec=0` dan `TimeoutStopSec=10` pada [jws.service](file:///home/riski/JWS_ORANGEPI_BUILDLINUX/overlay/etc/systemd/system/jws.service) agar `Restart=always` tidak pernah berhenti me-restart aplikasi apabila terjadi gangguan beruntun.
+- Hasil verifikasi QEMU (`task-3521`, mode VirGL):
+  - Konfigurasi `/etc/systemd/journald.conf.d/99-jws-24x7.conf` terpasang aktif di image (`orangepi_zero3_jws.img`, `2.1G`).
+  - Live HLS streaming (`mediaMode=2`): proses `jadwals+` tercatat **`74.0%–81.4%`** (total CPU 4-core **`22.1%–23.1%`**, `76.9%–77.9% id`), turun jauh dari baseline awal `220%`.
+- File/komponen terdampak: `overlay/opt/jws/jadwalsholat_imgui`, `overlay/etc/systemd/system/jws.service`, `overlay/etc/systemd/journald.conf.d/99-jws-24x7.conf`, `CHANGELOG.md`.
+
 ## [2026-11-17] Optimasi Pemutar Video & Live Streaming (Planar YUV420P Native, Seleksi HLS `<= 480p`, & Reuse `staticCacheTex`)
 - Apa yang diubah ([VideoStreamPlayer.hpp](file:///home/riski/JADWAL_SHOLAT_SDL/CPP_PROGRAM/include/VideoStreamPlayer.hpp), [VideoStreamPlayer.cpp](file:///home/riski/JADWAL_SHOLAT_SDL/CPP_PROGRAM/src/VideoStreamPlayer.cpp), [SlideshowManager.hpp](file:///home/riski/JADWAL_SHOLAT_SDL/CPP_PROGRAM/include/SlideshowManager.hpp), [SlideshowManager.cpp](file:///home/riski/JADWAL_SHOLAT_SDL/CPP_PROGRAM/src/SlideshowManager.cpp), [jadwalsholat_imgui.cpp](file:///home/riski/JADWAL_SHOLAT_SDL/CPP_PROGRAM/src/jadwalsholat_imgui.cpp)):
   - **1. Tekstur Planar YUV420P Native (`SDL_PIXELFORMAT_IYUV`) + Fast-Path Zero-`sws_scale`**:
