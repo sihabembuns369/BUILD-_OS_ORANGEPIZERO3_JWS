@@ -1,5 +1,23 @@
 # CHANGELOG
 
+## [2026-11-17] Eliminasi Spin `SDL_WaitEventTimeout`, Deteksi VirGL QEMU, & Governor CPU Idle < 10%
+- Apa yang diubah ([jadwalsholat_imgui.cpp](file:///home/riski/JADWAL_SHOLAT_SDL/CPP_PROGRAM/src/jadwalsholat_imgui.cpp)):
+  - **1. Eliminasi Busy-Poll `SDL_WaitEventTimeout` 1000Hz pada Backend `kmsdrm`**:
+    - Hasil disassembler (`aarch64-linux-gnu-objdump`) atas `/SDL_opi/lib/libSDL2-2.0.so.0` menunjukkan backend `kmsdrm` tidak memiliki `WaitEventTimeout` native, sehingga `SDL_WaitEventTimeout_REAL()` memanggil `SDL_PumpEventsInternal(1)` + `SDL_Delay(1)` **1.000 kali per detik** saat menunggu.
+    - Diganti dengan *responsive chunked sleep* (`SDL_Delay` bertahap `<= 33 ms` saat idle / `<= 16 ms` saat aktif + `SDL_PumpEvents`/`SDL_PollEvent` satu kali per potongan), memangkas >97% syscall polling kernel (`sy`) sekaligus menjaga respons input < 33 ms.
+    - Mengurangi frekuensi bangun `wifiWatchdogThread` dari `100 ms` menjadi `500 ms`.
+  - **2. Deteksi VirGL QEMU (`virtio_gpu`), Snap Transisi 1-Frame, & Reuse Cache Modal**:
+    - Di mode GUI `./runQemu` (`-device virtio-gpu-gl-pci -display sdl,gl=on`), `/dev/dri/renderD128` tersedia sehingga sebelumnya dianggap GPU hardware penuh, memicu rebuild cache latar tiap `1 detik`, animasi fade `30 FPS`, dan blit VirGL `20 FPS` (terukur `35.4%` single-core / `13.1%` total guest / `145%` QEMU host).
+    - Menambahkan deteksi `isQemuVirtioGpu` (`/sys/bus/virtio/drivers/virtio_gpu` atau `/sys/module/virtio_gpu`, digabungkan menjadi `isConstrainedGpu`), langsung menyelesaikan transisi `SlideshowManager` dalam 1 frame tanpa burst `bypassCache`, dan memakai *EMA duty-cycle governor* (`mult=28` emulasi / `mult=12` hardware) pada frame idle.
+    - Saat modal/sidebar (`SettingsModal`, `TVSidebar`, `QRModal`, `PowerModal`, `VirtualKeyboard`) terbuka dan diam (`>= 400 ms`), layer `staticCacheTex` dipakai ulang sebagai latar sehingga `MainDashboard::Render()` tidak dibangun ulang tiap frame.
+- Hasil verifikasi QEMU & Deploy:
+  - Kompilasi ARM64 menghasilkan [jadwalsholat_imgui](file:///home/riski/JWS_ORANGEPI_BUILDLINUX/overlay/opt/jws/jadwalsholat_imgui) (`md5sum 902726ca21b23bbd6f84b18dd157dfe9`) dan image [orangepi_zero3_jws.img](file:///home/riski/JWS_ORANGEPI_BUILDLINUX/output/orangepi_zero3_jws.img) (`2.1G`).
+  - Uji QEMU mode VirGL (`-device virtio-gpu-gl-pci -display sdl,gl=on`, `task-3248`):
+    - **Dashboard idle**: total CPU guest turun dari `13.1%` menjadi **`2.8%–3.8%` (`96.2%–97.2% id`)**, dengan proses `jadwalsholat_imgui` per-core turun dari `35.4%` menjadi **`5.8%–9.8%`**.
+    - **Modal idle**: total CPU guest **`3.3%–3.6%` (`96.4%–96.7% id`)**, dengan proses `jadwalsholat_imgui` **`7.3%–7.8%`**.
+  - Uji QEMU mode software (`-device virtio-gpu-pci -display vnc=127.0.0.1:1`, `task-3255`): CPU idle guest tercatat **`1.2%–2.4%` (`97.6%–98.8% id`)**, `jadwalsholat_imgui` **`2.0%–4.4%`** (modal idle **`3.4%`**, `98.5% id`), dengan tampilan dashboard terverifikasi bersih.
+- File/komponen terdampak: `overlay/opt/jws/jadwalsholat_imgui`, `CHANGELOG.md` (dan sumber aplikasi di `/home/riski/JADWAL_SHOLAT_SDL/CPP_PROGRAM/src/jadwalsholat_imgui.cpp`).
+
 ## [2026-11-17] Optimasi CPU Idle Menuju <= 10% (Pacing Adaptif, Wakeup Instan `SDL_WaitEventTimeout`, & Cache Latar Software)
 - Apa yang diubah ([jadwalsholat_imgui.cpp](file:///home/riski/JADWAL_SHOLAT_SDL/CPP_PROGRAM/src/jadwalsholat_imgui.cpp), [HaditsManager.hpp](file:///home/riski/JADWAL_SHOLAT_SDL/CPP_PROGRAM/include/HaditsManager.hpp)):
   - **1. Perbaikan Bug Thrashing `staticCacheTex` & `wallDt`**:
