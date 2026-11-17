@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## [2026-11-17] Perbaikan Tinggi Kartu Modal Iqomah agar Teks Peringatan HP Tidak Terpotong
+- Apa yang diubah ([IqomahOverlay.cpp](file:///home/riski/JADWAL_SHOLAT_SDL/CPP_PROGRAM/src/IqomahOverlay.cpp)):
+  - Memperbesar tinggi maksimum modal utama (`modalH = std::min(545.0f, scrH * 0.86f)`, sebelumnya `500.0f` / `0.82f`) dan mengubah tinggi kartu konten dalam (`##AdzanCardContent`, `##IqomahCardContent`, `##SholatCardContent`) dari tinggi tetap (`165px`/`175px`) menjadi dinamis mengikuti sisa ruang (`std::max(..., ImGui::GetContentRegionAvail().y - 4.0f)`).
+  - Mengatasi teks merah `[ PERHATIAN: HARAP NONAKTIFKAN / HENINGKAN NADA DERING HP ]` yang sebelumnya terpotong di batas bawah kartu saat mode preview aktif dan terjemahan hadits membungkus ke dua baris.
+- Hasil verifikasi QEMU:
+  - Build ARM64 ([jadwalsholat_imgui](file:///home/riski/JWS_ORANGEPI_BUILDLINUX/overlay/opt/jws/jadwalsholat_imgui), `md5sum`: `f281edfd4d971bdc093dfe04b5121917`) & image [orangepi_zero3_jws.img](file:///home/riski/JWS_ORANGEPI_BUILDLINUX/output/orangepi_zero3_jws.img) (`2.1G`).
+  - Verifikasi visual QEMU (`task-3788`, `/api/overlay/iqomah?prayer=DZUHUR`): seluruh konten modal Iqomah termasuk terjemahan 2 baris dan teks peringatan merah `[ PERHATIAN: HARAP NONAKTIFKAN / HENINGKAN NADA DERING HP ]` tampil utuh dengan margin bawah yang rapi.
+- File/komponen terdampak: `overlay/opt/jws/jadwalsholat_imgui`, `CHANGELOG.md`.
+
 ## [2026-11-17] Perbaikan Detik Hitung Mundur 1 Hz & Cache Guard Marquee Strip
 - Apa yang diubah ([jadwalsholat_imgui.cpp](file:///home/riski/JADWAL_SHOLAT_SDL/CPP_PROGRAM/src/jadwalsholat_imgui.cpp)):
   - Menghapus kuantisasi 15 detik (`(rawDisplaySec / 15) * 15`) pada `displaySec` dan menurunkan batas `maxPeriod` tidur loop (`<= 900 ms` VirGL / `<= 1000 ms` SW) agar detik hitung mundur waktu salat berikutnya (mis. `IMSAK - 05:09:16` / `-05:09:16`) selalu bergerak setiap 1 detik di semua mode GPU/QEMU maupun hardware.
