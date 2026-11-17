@@ -1,5 +1,21 @@
 # CHANGELOG
 
+## [2026-11-17] Perbaikan Stabilitas Kontrol Navigasi (Hapus `double NewFrame` Modal & Batasi `io.DeltaTime`)
+- Apa yang diubah ([jadwalsholat_imgui.cpp](file:///home/riski/JADWAL_SHOLAT_SDL/CPP_PROGRAM/src/jadwalsholat_imgui.cpp)):
+  - **1. Eliminasi Dual-Path `bypassCache` & `ImGui::NewFrame()` Ganda pada Modal**:
+    - Ketika `SettingsModal` / `TVSidebar` diam (`>= 400 ms`), path sebelumnya sempat mematikan `bypassCache` sehingga `staticDirty` memanggil `ImGui::NewFrame()` + `MainDashboard::Render()` tanpa modal, lalu memanggil `ImGui::NewFrame()` kedua untuk modal—mengakibatkan ImGui mereset `NavWindow`/fokus dan membuat kontrol lompat-lompat.
+    - Seluruh modal/sidebar (`SettingsModal`, `TVSidebar`, `QRModal`, `PowerModal`, `VirtualKeyboard`) kini selalu berjalan konsisten di jalur tunggal `bypassCache = true` (`1× ImGui::NewFrame()` per loop).
+  - **2. Pembatasan `io.DeltaTime` (`<= 50 ms`) & Tuning Key-Repeat + Event Filter**:
+    - Membatasi `realDt = std::min(0.05f, wallDt)` untuk `io.DeltaTime` (sementara `wallDt` tetap penuh untuk marquee dan slideshow), serta menyetel `io.KeyRepeatDelay = 0.45f` dan `io.KeyRepeatRate = 0.10f` sehingga bangun dari tidur idle tidak memicu *key-repeat* beruntun dari satu kali tekan.
+    - `lastInteractiveTick` hanya diperbarui pada event input nyata (`SDL_KEYDOWN`/`KEYUP`/`MOUSEBUTTONDOWN`/`WHEEL`/`MOUSEMOTION`/`CONTROLLER*`/`TEXTINPUT`).
+- Hasil verifikasi QEMU:
+  - Binary ARM64 terbaru ([jadwalsholat_imgui](file:///home/riski/JWS_ORANGEPI_BUILDLINUX/overlay/opt/jws/jadwalsholat_imgui)) terakit ke [orangepi_zero3_jws.img](file:///home/riski/JWS_ORANGEPI_BUILDLINUX/output/orangepi_zero3_jws.img) (`2.1G`).
+  - Uji QEMU mode VirGL (`-device virtio-gpu-gl-pci -display sdl,gl=on`, `task-3312`):
+    - **Dashboard idle**: total CPU guest **`3.6%–3.8%` (`96.2%–96.4% id`)**, proses `jadwals+` **`7.3%–9.3%`**.
+    - **Menu Pengaturan terbuka (idle)**: total CPU guest **`3.4%–4.0%` (`96.0%–96.6% id`)**, proses `jadwals+` **`7.8%–9.3%`**.
+  - Uji visual kontrol (`task-3320`, mode software `virtio-gpu-pci`): menekan `s` lalu `Down` memindahkan fokus tepat satu per satu (`> Profil & Kas` → `> Petugas Sholat`) tanpa lompat.
+- File/komponen terdampak: `overlay/opt/jws/jadwalsholat_imgui`, `CHANGELOG.md` (dan sumber aplikasi di `/home/riski/JADWAL_SHOLAT_SDL/CPP_PROGRAM/src/jadwalsholat_imgui.cpp`).
+
 ## [2026-11-17] Eliminasi Spin `SDL_WaitEventTimeout`, Deteksi VirGL QEMU, & Governor CPU Idle < 10%
 - Apa yang diubah ([jadwalsholat_imgui.cpp](file:///home/riski/JADWAL_SHOLAT_SDL/CPP_PROGRAM/src/jadwalsholat_imgui.cpp)):
   - **1. Eliminasi Busy-Poll `SDL_WaitEventTimeout` 1000Hz pada Backend `kmsdrm`**:
