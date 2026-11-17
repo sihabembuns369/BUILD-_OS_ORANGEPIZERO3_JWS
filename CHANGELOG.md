@@ -1,5 +1,17 @@
 # CHANGELOG
 
+## [2026-11-17] Perbaikan Detik Hitung Mundur 1 Hz & Cache Guard Marquee Strip
+- Apa yang diubah ([jadwalsholat_imgui.cpp](file:///home/riski/JADWAL_SHOLAT_SDL/CPP_PROGRAM/src/jadwalsholat_imgui.cpp)):
+  - Menghapus kuantisasi 15 detik (`(rawDisplaySec / 15) * 15`) pada `displaySec` dan menurunkan batas `maxPeriod` tidur loop (`<= 900 ms` VirGL / `<= 1000 ms` SW) agar detik hitung mundur waktu salat berikutnya (mis. `IMSAK - 05:09:16` / `-05:09:16`) selalu bergerak setiap 1 detik di semua mode GPU/QEMU maupun hardware.
+  - Menambahkan pembanding kunci cache pada `MarqueeTextureCache::Rebuild()` (`cachedRenderer`, `cachedFont`, `cachedFontSize`, `cachedH`, `cachedTextY`, `cachedTextColor`, `cachedTotalLen`, `cachedText`) agar tekstur tile running text tidak dihancurkan dan dibuat ulang setiap detik ketika isi teks dan gaya marquee tidak berubah.
+- Hasil verifikasi QEMU:
+  - Build ARM64 ([jadwalsholat_imgui](file:///home/riski/JWS_ORANGEPI_BUILDLINUX/overlay/opt/jws/jadwalsholat_imgui), `md5sum`: `2f4d515bed9a7b4be29980b3b13c77ec`) & image [orangepi_zero3_jws.img](file:///home/riski/JWS_ORANGEPI_BUILDLINUX/output/orangepi_zero3_jws.img) (`2.1G`).
+  - Pengukuran VirGL (`task-3698`):
+    - **Mode Idle 1 Hz countdown + marquee aktif**: total CPU guest 4-core **`7.2%–9.0%`** (**`91.0%–92.8% id`**), proses `jadwals+` **`17.6%–19.4%`** (setelah burst startup awal).
+    - **Live HLS streaming 720p (`mediaMode=2`, Layout 3)**: total CPU guest 4-core **`20.3%–21.0%`** (**`79.0%–79.7% id`**), proses `jadwals+` **`66.7%–73.8%`**.
+  - Verifikasi visual QEMU (`task-3704`): angka detik hitung mundur teramati turun secara presisi (`-05:09:16` -> `-05:09:08`).
+- File/komponen terdampak: `overlay/opt/jws/jadwalsholat_imgui`, `CHANGELOG.md`.
+
 ## [2026-11-17] Pengembalian Resolusi Video & Live Streaming ke 720p (Tajam & Tetap Hemat CPU)
 - Apa yang diubah ([VideoStreamPlayer.cpp](file:///home/riski/JADWAL_SHOLAT_SDL/CPP_PROGRAM/src/VideoStreamPlayer.cpp)):
   - Mengembalikan seleksi varian HLS (`<= 720p`, sebelumnya dibatasi `<= 480p`) serta batas resolusi render video `MAX_TARGET_WIDTH=1280`, `MAX_TARGET_HEIGHT=720` secara penuh (menghapus downscale paksa `480×270`/`640×360` agar tampilan video lokal dan live stream tajam sesuai layar 720p).
