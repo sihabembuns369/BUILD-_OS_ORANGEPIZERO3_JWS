@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## [2026-11-17] Pengembalian Resolusi Video & Live Streaming ke 720p (Tajam & Tetap Hemat CPU)
+- Apa yang diubah ([VideoStreamPlayer.cpp](file:///home/riski/JADWAL_SHOLAT_SDL/CPP_PROGRAM/src/VideoStreamPlayer.cpp)):
+  - Mengembalikan seleksi varian HLS (`<= 720p`, sebelumnya dibatasi `<= 480p`) serta batas resolusi render video `MAX_TARGET_WIDTH=1280`, `MAX_TARGET_HEIGHT=720` secara penuh (menghapus downscale paksa `480×270`/`640×360` agar tampilan video lokal dan live stream tajam sesuai layar 720p).
+  - Mengembalikan `skip_loop_filter = AVDISCARD_NONREF` (menghapus `AVDISCARD_ALL` dan `AV_CODEC_FLAG2_FAST`) serta filter skala `SWS_FAST_BILINEAR` (menghapus `SWS_POINT`) untuk menghindari artefak blok, sementara fast-path zero-`sws_scale` + `SDL_PIXELFORMAT_IYUV` + `AVDISCARD_ALL` varian non-aktif + pembatasan interval upload/render tetap dipertahankan.
+- Hasil verifikasi QEMU:
+  - Build ARM64 ([jadwalsholat_imgui](file:///home/riski/JWS_ORANGEPI_BUILDLINUX/overlay/opt/jws/jadwalsholat_imgui), `md5sum`: `41c594b9bb1217e662ea8b7a894b3ead`) & image [orangepi_zero3_jws.img](file:///home/riski/JWS_ORANGEPI_BUILDLINUX/output/orangepi_zero3_jws.img) (`2.1G`).
+  - Live HLS streaming 720p (`mediaMode=2`, `m.live.net.sa:1935/live/quran/playlist.m3u8`, varian `1280x720`) pada QEMU VirGL (`task-3630`): koneksi `ESTAB` aktif ke server stream (`64.131.95.5:1935`), penggunaan CPU proses `jadwals+` berada pada kisaran **`50.5%–103.4%`** (dari kapasitas 400%, total CPU 4-core **`17.7%–29.1%`**, **`70.9%–82.3% id`** setelah burst buffer awal `93.1%` / `44.6% id`).
+  - Verifikasi visual QEMU software render (`task-3646`, `mediaMode=1` `assets/video.mp4`): pemutaran video `IYUV` + lubang transparan `staticCacheTex` terkomposisi mulus di belakang UI tanpa artefak warna maupun distorsi.
+- File/komponen terdampak: `overlay/opt/jws/jadwalsholat_imgui`, `CHANGELOG.md`.
+
 ## [2026-11-17] Hardening Stabilitas 24/7 Nonstop & Optimasi Lanjutan Decode Video
 - Apa yang diubah ([VideoStreamPlayer.cpp](file:///home/riski/JADWAL_SHOLAT_SDL/CPP_PROGRAM/src/VideoStreamPlayer.cpp), [jadwalsholat_imgui.cpp](file:///home/riski/JADWAL_SHOLAT_SDL/CPP_PROGRAM/src/jadwalsholat_imgui.cpp), [jws.service](file:///home/riski/JWS_ORANGEPI_BUILDLINUX/overlay/etc/systemd/system/jws.service), [99-jws-24x7.conf](file:///home/riski/JWS_ORANGEPI_BUILDLINUX/overlay/etc/systemd/journald.conf.d/99-jws-24x7.conf)):
   - **1. Penurunan Beban Decode & Render Video**:
