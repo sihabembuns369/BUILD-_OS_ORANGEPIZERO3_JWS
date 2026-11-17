@@ -1,5 +1,18 @@
 # CHANGELOG
 
+## [2026-11-17] Optimasi CPU Idle Menuju <= 10% (Pacing Adaptif, Wakeup Instan `SDL_WaitEventTimeout`, & Cache Latar Software)
+- Apa yang diubah ([jadwalsholat_imgui.cpp](file:///home/riski/JADWAL_SHOLAT_SDL/CPP_PROGRAM/src/jadwalsholat_imgui.cpp), [HaditsManager.hpp](file:///home/riski/JADWAL_SHOLAT_SDL/CPP_PROGRAM/include/HaditsManager.hpp)):
+  - **1. Perbaikan Bug Thrashing `staticCacheTex` & `wallDt`**:
+    - Pada software renderer (`llvmpipe`), `HaditsManager::Init()` sebelumnya memulai `s_Timer = 0.0f` (fase fade `alpha < 0.999f`) dan delta waktu frame lambat (>0.25s) direset kembali ke `0.033f`, membuat transisi fade tertahan puluhan detik dan memaksa render penuh (`bypass=1`, `~1150 ms/frame`). Selain itu, interval cache `1 detik` lebih singkat dari durasi rebuild penuh di `llvmpipe` (`~1460 ms`), sehingga `staticDirty` selalu `true`.
+    - Kini `HaditsManager::Init()` memulai di `s_Timer = 1.0f` (`alpha = 1.0f`), timer slide/hadits menggunakan `wallDt` riil, pada software renderer transisi fade diselesaikan instan (`!isSoftwareRenderer`), dan sinkronisasi cache latar software dijadwalkan per 15 detik (`1 detik` tetap dipertahankan untuk GPU hardware Panfrost `/dev/dri/renderD128`).
+  - **2. Pre-komputasi Marquee & `SDL_WaitEventTimeout` Adaptif**:
+    - Lebar teks marquee (`cachedMarqueeLen`) dihitung sekali saja saat cache latar diperbarui (tidak lagi memanggil `CalcTextSizeA()` setiap frame), dan pergerakan `marqueeOffset` dikompensasi memakai `wallDt` agar laju teks konstan di segala frame rate.
+    - Mengganti `SDL_Delay` dengan `SDL_WaitEventTimeout(&pendingEvent, sleepMs)` sehingga loop tidur hemat daya saat idle (duty-cycle software `<= 25%` per core / `~8-10%` total 4-core; `20 FPS` pada GPU hardware) dan langsung bangun instan (`< 1 ms`) ke mode responsif `30 FPS` begitu ada input keyboard, remot IR, maupun mouse.
+- Hasil verifikasi QEMU & Deploy:
+  - Kompilasi ARM64 menghasilkan [jadwalsholat_imgui](file:///home/riski/JWS_ORANGEPI_BUILDLINUX/overlay/opt/jws/jadwalsholat_imgui) (`md5sum 875ec7bc5cd4077ba4980086648eb8bc`) dan image [orangepi_zero3_jws.img](file:///home/riski/JWS_ORANGEPI_BUILDLINUX/output/orangepi_zero3_jws.img) (`2.1G`).
+  - Uji beban QEMU (`task-3100`) mencatat CPU idle turun dari `~25-30%` (`~96%` single-thread) menjadi **`7.2 us + 2.6 sy = 9.8%` dan `6.9 us + 3.0 sy = 9.9%` (`89.1% id`, thread render `38.1%–39.0%`)**, serta memverifikasi tampilan dashboard, pergerakan running text marquee, dan pembaruan jam/countdown berjalan bersih.
+- File/komponen terdampak: `overlay/opt/jws/jadwalsholat_imgui`, `CHANGELOG.md` (dan sumber aplikasi di `/home/riski/JADWAL_SHOLAT_SDL/CPP_PROGRAM/{src/jadwalsholat_imgui.cpp,include/HaditsManager.hpp}`).
+
 ## [2026-11-17] Perbaikan Kontrol Navigasi Keyboard/Remot, Fokus Tab `Layout & Tema`, Penggantian Layout, & `TVCombo`
 - Apa yang diubah:
   - **1. Penyatuan `UIWidgets::TVCombo` & Perbaikan Fokus Saat Membuka Dropdown `Combo` ([UIWidgets.hpp](file:///home/riski/JADWAL_SHOLAT_SDL/CPP_PROGRAM/include/UIWidgets.hpp), [UIWidgets.cpp](file:///home/riski/JADWAL_SHOLAT_SDL/CPP_PROGRAM/src/UIWidgets.cpp), [TVSidebar.cpp](file:///home/riski/JADWAL_SHOLAT_SDL/CPP_PROGRAM/src/TVSidebar.cpp), [SettingsModal.cpp](file:///home/riski/JADWAL_SHOLAT_SDL/CPP_PROGRAM/src/SettingsModal.cpp))**:
