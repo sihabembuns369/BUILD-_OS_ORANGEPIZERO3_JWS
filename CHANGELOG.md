@@ -1,5 +1,20 @@
 # CHANGELOG
 
+## [2026-11-17] Pre-Render Tekstur Marquee (`0` ImGui) & Frame Pacing Mulus untuk Running Text
+- Apa yang diubah ([jadwalsholat_imgui.cpp](file:///home/riski/JADWAL_SHOLAT_SDL/CPP_PROGRAM/src/jadwalsholat_imgui.cpp)):
+  - **1. Cache Tekstur Strip Marquee (`MarqueeTextureCache`, Tanpa `ImGui::NewFrame()` per Frame)**:
+    - Sebelumnya setiap frame *running text* pada mode cache latar masih menjalankan `ImGui_ImplSDLRenderer2_NewFrame()`, `ImGui_ImplSDL2_NewFrame()`, `ImGui::NewFrame()`, teselasi ~180 glif Latin/Arab, dan upload geometry baru ke VirGL, sehingga *frame rate* marquee harus ditekan rendah dan tampak patah-patah.
+    - Kini teks running text di-pre-render satu kali saat `staticDirty` ke ubin tekstur transparan `MarqueeTextureCache` (maks lebar 2048px per ubin, mode blend premultiplied) dan pada frame animasi cukup mem-blit `staticCacheTex` + `SDL_RenderCopyF` sub-pixel (`0` panggilan `ImGui::NewFrame()`/`Render()`).
+  - **2. Penalaan Kelancaran Running Text & Animasi (`targetFrameMs`)**:
+    - Marquee GPU hardware/Panfrost kini ditargetkan **`30 FPS` (`33 ms`)**, VirGL QEMU **`24 FPS` (`42 ms`)** dengan governor khusus `mult = 11` (`isMarqueeOnlyIdle`), dan software QEMU **`10 FPS` (`100 ms`)**; sementara saat modal/tampilan diam tetap hemat (`mult = 24` VirGL / `28` software).
+- Hasil verifikasi QEMU & Deploy:
+  - Binary ARM64 terbaru ([jadwalsholat_imgui](file:///home/riski/JWS_ORANGEPI_BUILDLINUX/overlay/opt/jws/jadwalsholat_imgui), `md5sum 510033b260f1a3115e2cbf6ee35057c9`) terakit ke [orangepi_zero3_jws.img](file:///home/riski/JWS_ORANGEPI_BUILDLINUX/output/orangepi_zero3_jws.img) (`2.1G`).
+  - Uji QEMU mode VirGL (`-device virtio-gpu-gl-pci -display sdl,gl=on`, `task-3384`):
+    - **Dashboard + running text marquee**: total CPU guest **`5.5%–7.9%` (`92.1%–94.5% id`)**, proses `jadwals+` **`16.1%–18.5%`**.
+    - **Menu Pengaturan terbuka (idle)**: total CPU guest **`3.9%–4.0%` (`96.0%–96.1% id`)**, proses `jadwals+` **`8.3%–9.3%`**.
+  - Uji visual software (`task-3365`, `mq_1.png` / `mq_2.png`) mengonfirmasi teks emas Latin & Arab dari `MarqueeTextureCache` tampil tajam, bersih, dan terpotong rapi di strip marquee.
+- File/komponen terdampak: `overlay/opt/jws/jadwalsholat_imgui`, `CHANGELOG.md` (dan sumber aplikasi di `/home/riski/JADWAL_SHOLAT_SDL/CPP_PROGRAM/src/jadwalsholat_imgui.cpp`).
+
 ## [2026-11-17] Perbaikan Stabilitas Kontrol Navigasi (Hapus `double NewFrame` Modal & Batasi `io.DeltaTime`)
 - Apa yang diubah ([jadwalsholat_imgui.cpp](file:///home/riski/JADWAL_SHOLAT_SDL/CPP_PROGRAM/src/jadwalsholat_imgui.cpp)):
   - **1. Eliminasi Dual-Path `bypassCache` & `ImGui::NewFrame()` Ganda pada Modal**:
