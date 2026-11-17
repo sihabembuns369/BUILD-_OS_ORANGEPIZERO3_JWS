@@ -1,5 +1,18 @@
 # CHANGELOG
 
+## [2026-11-17] Perbaikan Navigasi Keyboard/Remot Per-Kartu pada Daftar Jaringan Wi-Fi
+- Apa yang diubah:
+  - **1. Akar Masalah Daftar Wi-Fi Dianggap Satu Kotak Tunggal Saat Navigasi Keyboard**:
+    - `ImGui::InvisibleButton` pada [UIWidgets.cpp](file:///home/riski/JADWAL_SHOLAT_SDL/CPP_PROGRAM/src/UIWidgets.cpp) secara bawaan menyetel `ImGuiItemFlags_NoNav` kecuali diberi `ImGuiButtonFlags_EnableNav`, dan wadah `BeginChild` daftar Wi-Fi belum memakai `ImGuiChildFlags_NavFlattened`, sehingga tombol panah keyboard meloncati seluruh daftar Wi-Fi sekaligus.
+  - **2. Perbaikan ([UIWidgets.cpp](file:///home/riski/JADWAL_SHOLAT_SDL/CPP_PROGRAM/src/UIWidgets.cpp), [TVSidebar.cpp](file:///home/riski/JADWAL_SHOLAT_SDL/CPP_PROGRAM/src/TVSidebar.cpp), [SettingsModal.cpp](file:///home/riski/JADWAL_SHOLAT_SDL/CPP_PROGRAM/src/SettingsModal.cpp))**:
+    - Mengaktifkan `ImGuiButtonFlags_EnableNav` pada `ImGui::InvisibleButton` di `UIWidgets::RenderWifiNetworkCard`, `SetScrollHereY(0.5f)` saat berpindah fokus panah atas/bawah, serta highlight border fokus emas per kartu.
+    - Menambahkan `ImGuiChildFlags_Borders | ImGuiChildFlags_NavFlattened` pada `BeginChild("##WifiNetworkList", ...)` di `TVSidebar` dan `BeginChild("##ModalWifiList", ...)` di `SettingsModal`, serta mengarahkan fokus awal ke kartu Wi-Fi pertama (`s_RequestWifiCardFocus`) saat membuka tab Wi-Fi lewat pintasan keyboard.
+- Hasil verifikasi QEMU & Deploy:
+  - Kompilasi ARM64 menghasilkan [jadwalsholat_imgui](file:///home/riski/JWS_ORANGEPI_BUILDLINUX/overlay/opt/jws/jadwalsholat_imgui) (`md5sum 6aee411d1f6538efbba4f4fe220b3961`) dan image `orangepi_zero3_jws.img` (`2.1G`).
+  - Uji visual QEMU (`task-2621`) melalui `wifi_nav_individual.png` dan `wifi_switched.png` memverifikasi fokus emas berpindah per kartu Wi-Fi (`WIFI_KANTOR_DKM` → `MASJID_FREE_WIFI`) menggunakan tombol panah keyboard.
+  - Image & paket `.zip` (`573.8 MB`) dideploy ke Windows melalui [deploy_to_windows.sh](file:///home/riski/JWS_ORANGEPI_BUILDLINUX/deploy_to_windows.sh).
+- File/komponen terdampak: `overlay/opt/jws/jadwalsholat_imgui`, `CHANGELOG.md` (dan sumber aplikasi di `/home/riski/JADWAL_SHOLAT_SDL/CPP_PROGRAM/src/{UIWidgets.cpp,TVSidebar.cpp,SettingsModal.cpp}`).
+
 ## [2026-11-17] Perbaikan Kerning Teks Layar Loading & Penghapusan Garis Pemisah/Aksen di Semua Layout & Tema
 - Apa yang diubah:
   - **1. Perbaikan Jarak Huruf Layar Loading (`StartupScreen.cpp`)**:
