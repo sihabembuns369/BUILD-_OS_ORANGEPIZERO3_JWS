@@ -1,5 +1,23 @@
 # CHANGELOG
 
+## [2026-11-17] Optimasi Pemutar Video & Live Streaming (Planar YUV420P Native, Seleksi HLS `<= 480p`, & Reuse `staticCacheTex`)
+- Apa yang diubah ([VideoStreamPlayer.hpp](file:///home/riski/JADWAL_SHOLAT_SDL/CPP_PROGRAM/include/VideoStreamPlayer.hpp), [VideoStreamPlayer.cpp](file:///home/riski/JADWAL_SHOLAT_SDL/CPP_PROGRAM/src/VideoStreamPlayer.cpp), [SlideshowManager.hpp](file:///home/riski/JADWAL_SHOLAT_SDL/CPP_PROGRAM/include/SlideshowManager.hpp), [SlideshowManager.cpp](file:///home/riski/JADWAL_SHOLAT_SDL/CPP_PROGRAM/src/SlideshowManager.cpp), [jadwalsholat_imgui.cpp](file:///home/riski/JADWAL_SHOLAT_SDL/CPP_PROGRAM/src/jadwalsholat_imgui.cpp)):
+  - **1. Tekstur Planar YUV420P Native (`SDL_PIXELFORMAT_IYUV`) + Fast-Path Zero-`sws_scale`**:
+    - Sebelumnya `VideoStreamPlayer` memproses `sws_scale(YUV420P -> RGBA)` dan mengunggah `3.7 MB/frame` (`SDL_PIXELFORMAT_RGBA32` `1280×720`) tiap frame. Kini menggunakan `SDL_PIXELFORMAT_IYUV` (`SDL_UpdateYUVTexture`) langsung di shader GLES2 (hemat memori upload `2.7×` dan 0 konversi warna CPU bila format sumber sudah `AV_PIX_FMT_YUV420P`).
+  - **2. Seleksi Varian HLS `<= 480p`, `AVDISCARD_ALL`, & Decoder 1-Thread Hemat CPU**:
+    - Saat membuka manifest HLS multi-bitrate (`.m3u8`), FFmpeg kini memilih varian `<= 480p` terbaik dan memberi `AVDISCARD_ALL` pada varian/stream lain agar tidak mengunduh paralel.
+    - Membatasi target skala video (`640×360` pada `virtio_gpu` QEMU / `854×480` pada hardware), `thread_count = 1`, `skip_loop_filter = AVDISCARD_NONREF`, batas upload `<= 24 FPS`, reuse buffer mixing audio, dan melewati decode audio saat mute.
+  - **3. Cache `MainDashboard` (`staticCacheTex` + Transparent Hole) di Atas Lapisan Video**:
+    - Sebelumnya `mediaMode != IMAGE_SLIDESHOW` memaksa `bypassCache = true` sehingga `MainDashboard::Render()` dan `ImGui::Render()` berjalan penuh 30×/detik di atas video.
+    - Kini `SlideshowManager::SetVideoHoleCapture()` melubangi area video dengan `ClearVideoHoleCallback` (`0,0,0,0`) pada `staticCacheTex` di semua layout (`Layout 1–4`) sehingga UI dashboard, kartu kas melayang, dan marquee `MarqueeTextureCache` ter-blit ringan tanpa `ImGui::NewFrame()` tiap frame video.
+- Hasil verifikasi QEMU & Deploy:
+  - Binary ARM64 terbaru ([jadwalsholat_imgui](file:///home/riski/JWS_ORANGEPI_BUILDLINUX/overlay/opt/jws/jadwalsholat_imgui)) terakit ke [orangepi_zero3_jws.img](file:///home/riski/JWS_ORANGEPI_BUILDLINUX/output/orangepi_zero3_jws.img) (`2.1G`).
+  - Uji QEMU mode VirGL (`-device virtio-gpu-gl-pci -display sdl,gl=on`, `task-3475`, `task-3493`):
+    - **Live HLS streaming** (`m.live.net.sa:1935/live/quran/playlist.m3u8`): total CPU proses turun dari `~220%` menjadi **`78.5%–86.1%` (`21.2%–22.8%` total CPU 4-core, `75.7%–77.5% id`)**.
+    - **Video lokal** (`assets/video.mp4`, `task-3493`): **`89.1%–116.7%`** per-proses (`23.8%–31.9%` total 4-core, terpecah atas **`65.7%–72.2%`** thread decoder H.264 FFmpeg dan **`23.4%–44.6%`** thread UI/render `jadwalsholat_im`).
+  - Uji visual (`task-3481`, `vid_l4.png`): pemutaran video `IYUV` tampil bersih di dalam bingkai hero `Layout 4` dengan kartu kas melayang & running text di atasnya.
+- File/komponen terdampak: `overlay/opt/jws/jadwalsholat_imgui`, `CHANGELOG.md` (dan sumber aplikasi di `/home/riski/JADWAL_SHOLAT_SDL/CPP_PROGRAM/`).
+
 ## [2026-11-17] Pre-Render Tekstur Marquee (`0` ImGui) & Frame Pacing Mulus untuk Running Text
 - Apa yang diubah ([jadwalsholat_imgui.cpp](file:///home/riski/JADWAL_SHOLAT_SDL/CPP_PROGRAM/src/jadwalsholat_imgui.cpp)):
   - **1. Cache Tekstur Strip Marquee (`MarqueeTextureCache`, Tanpa `ImGui::NewFrame()` per Frame)**:
